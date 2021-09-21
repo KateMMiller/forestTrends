@@ -11,6 +11,7 @@ Depends:
 Imports: 
     broom.mixed,
     dplyr,
+    ggplot2,
     lme4,
     prediction,
     magrittr,
@@ -24,3 +25,4 @@ Collate:
     'trend_fun.R'
     'case_boot_sample.R'
     'case_boot_lmer.R'
+    'plot_trend_response.R'

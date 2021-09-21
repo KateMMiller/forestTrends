@@ -2,7 +2,9 @@
 
 export(case_boot_lmer)
 export(case_boot_sample)
+export(plot_trend_response)
 export(trend_fun)
+import(ggplot2)
 importFrom(broom.mixed,tidy)
 importFrom(dplyr,arrange)
 importFrom(dplyr,filter)
