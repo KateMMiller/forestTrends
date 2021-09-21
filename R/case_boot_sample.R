@@ -9,6 +9,8 @@
 #' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 #' response variable.
 #' @param y Quoted response variable in the data frame.
+#' @random_type intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
+#' random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)
 #' @param sample TRUE or FALSE. TRUE (default) will generate a bootstrapped sample of the specified data frame. FALSE will
 #' run trend_fun() on the original dataset.
 #' @param sample_num Used for iteration to indicate the replicate number of the bootstrap. Do not need to specify if not
@@ -31,20 +33,12 @@
 #'
 #' @export
 
-case_boot_sample <- function(df, y, sample = TRUE, sample_num = 1){
+case_boot_sample <- function(df, y, random_type = c('intercept', 'slope'), sample = TRUE, sample_num = 1){
 
   if(!"Plot_Name" %in% names(df)){stop('Must have column named "Plot_Name" to run function')}
   if(!"cycle" %in% names(df)){stop('Must have column named "cycle" to run function')}
-
-  # Check that suggested package required for this function are installed
-  if(!requireNamespace("magrittr", quietly = TRUE)){
-    stop("Package 'magrittr' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("dplyr", quietly = TRUE)){
-    stop("Package 'dplyr' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("stringr", quietly = TRUE)){
-    stop("Package 'stringr' must be installed.", call. = FALSE)}
+  if(missing(y)){stop("Must specify y variable to run function")}
+  random_type <- match.arg(random_type)
 
   plots <- data.frame(Plot_Name = unique(df$Plot_Name))
   n <- nrow(plots)
@@ -60,12 +54,13 @@ case_boot_sample <- function(df, y, sample = TRUE, sample_num = 1){
   df_samp <- dplyr::left_join(samp, df[,c("Plot_Name", "cycle", y)], by = c("Plot_Name")) %>%
     dplyr::arrange(Plot_Name, case, cycle)
 
-  mod <- suppressMessages(trend_fun(df_samp, y = y)) %>%
+  mod <- suppressMessages(trend_fun(df_samp, y = y, random_type = random_type)) %>%
     dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
 
-  chatty <- ifelse(exists("chatty"), chatty, FALSE)
+  chatty <- ifelse(exists("chatty"), chatty, TRUE)
   sample_num <- ifelse(exists("sample_num"), sample_num, 1)
-  if(chatty == TRUE & sample_num %% 2){cat(".")} #prints tick every other rep
+
+  if(chatty == TRUE & (sample_num %% 10) == 0){cat(".")} #prints tick every 10 reps
 
   return(mod)
 }

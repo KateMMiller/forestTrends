@@ -12,6 +12,8 @@
 #' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 #' response variable.
 #' @param y Quoted response variable in the data frame.
+#' @random_type intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
+#' random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)
 #' @param num_reps Number of replicates to run in the bootstrap
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
 #' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.
@@ -34,30 +36,22 @@
 #'
 #' @export
 
-case_boot_lmer <- function(df, y, num_reps, chatty = TRUE){
+case_boot_lmer <- function(df, y, random_type = c('intercept', 'slope'), num_reps, chatty = TRUE){
 
   if(!"Plot_Name" %in% names(df)){stop('Must have column named "Plot_Name" to run function')}
   if(!"cycle" %in% names(df)){stop('Must have column named "cycle" to run function')}
-
-  if(!requireNamespace("magrittr", quietly = TRUE)){
-    stop("Package 'magrittr' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("dplyr", quietly = TRUE)){
-    stop("Package 'dplyr' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("purrr", quietly = TRUE)){
-    stop("Package 'purrr' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("tidyr", quietly = TRUE)){
-    stop("Package 'tidyr' must be installed.", call. = FALSE)}
+  if(missing(y)){stop("Must specify y variable to run function")}
+  if(missing(num_reps)){stop("Must specify number of replicates for bootstrap")}
+  random_type <- match.arg(random_type)
 
   if(chatty == TRUE){cat(unique(substr(df$Plot_Name, 1, 4)))}
 
-  boot_mod <- purrr::map_df(seq_len(num_reps),
-                            ~case_boot_sample(df, y, sample = T, sample_num = .x)) %>%
-    tidyr::pivot_wider(names_from = term, values_from = estimate)
+  boot_mod <- suppressWarnings(purrr::map_df(seq_len(num_reps),
+                               ~case_boot_sample(df, y, sample = T, sample_num = .x, random_type = random_type)) %>%
+    tidyr::pivot_wider(names_from = term, values_from = estimate))
 
-  real_mod <- case_boot_sample(df, y, sample = F, sample_num = 1) %>% dplyr::select(-boot_num, -isSingular)
+  real_mod <- suppressWarnings(case_boot_sample(df, y, sample = F, sample_num = 1, random_type = random_type) %>%
+                               dplyr::select(-boot_num, -isSingular))
 
   boot_CIs <- data.frame(t(apply(boot_mod %>% dplyr::select(-boot_num, -isSingular), 2,
                                  quantile, probs = c(0.025, 0.975), na.rm = T)),
@@ -83,6 +77,7 @@ case_boot_lmer <- function(df, y, num_reps, chatty = TRUE){
   colnames(boot_CIs) <- c("lower95", "upper95", "num_boots", "term")
 
   results <- dplyr::left_join(real_mod, boot_CIs, by = "term")
+
   if(chatty == TRUE){cat("Done", "\n")}
   return(results)
 }

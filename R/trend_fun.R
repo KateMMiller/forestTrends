@@ -7,6 +7,8 @@
 #' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 #' response variable.
 #' @param y Quoted response variable in the data frame.
+#' @random_type intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
+#' random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)
 #'
 #' @importFrom magrittr %>%
 #' @importFrom lme4 lmer
@@ -26,25 +28,12 @@
 #'
 #' @export
 
-trend_fun <- function(df, y){
+trend_fun <- function(df, y, random_type = c('intercept', 'slope')){
+
   if(!"Plot_Name" %in% names(df)){stop('Must have column named "Plot_Name" to run function')}
   if(!"cycle" %in% names(df)){stop('Must have column named "cycle" to run function')}
-
-  # Check that suggested package required for this function are installed
-  if(!requireNamespace("magrittr", quietly = TRUE)){
-    stop("Package 'magrittr' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("lme4", quietly = TRUE)){
-    stop("Package 'lme4' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("broom.mixed", quietly = TRUE)){
-    stop("Package 'broom.mixed' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("prediction", quietly = TRUE)){
-    stop("Package 'prediction' must be installed.", call. = FALSE)}
-
-  if(!requireNamespace("dplyr", quietly = TRUE)){
-    stop("Package 'dplyr' must be installed.", call. = FALSE)}
+  if(missing(y)){stop("Must specify y variable to run function")}
+  random_type <- match.arg(random_type)
 
   # set up model
   mod_df <- data.frame(term = c("Intercept", "Slope"), estimate = NA_real_)
@@ -52,7 +41,8 @@ trend_fun <- function(df, y){
                         estimate = NA_real_)
 
   tryCatch(
-    {trend_form <- as.formula(paste0(y, "~ cycle + (1|Plot_Name)"))
+    {trend_form <- if(random_type == 'intercept'){as.formula(paste0(y, "~ cycle + (1|Plot_Name)"))
+    } else if(random_type == 'slope'){as.formula(paste0(y, "~ cycle + (1 + cycle|Plot_Name)"))}
     mod <- suppressMessages(lme4::lmer(trend_form, data = df))
     # fit model and clean up output
     mod_df <- broom.mixed::tidy(mod) %>% dplyr::filter(effect == 'fixed') %>%
@@ -66,7 +56,7 @@ trend_fun <- function(df, y){
                           estimate = predict(mod, newdata = new_df, type = 'response', re.form = NA))},
 
     error = function(e){warning("Model failed to fit, returning empty data.frame")}, #returns empty mod_df
-    warning = function(w){"Model failed to fit, returning empty data.frame"} #returns empty mod_df
+    warning = function(w){warning("Model failed to fit, returning empty data.frame")} #returns empty mod_df
   )
 
   output <- rbind(mod_df, pred_df) %>%
