@@ -4,7 +4,7 @@
 \alias{trend_fun}
 \title{trend_fun: fit random intercept model and return results of interest}
 \usage{
-trend_fun(df, y)
+trend_fun(df, y, random_type = c("intercept", "slope"))
 }
 \arguments{
 \item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one

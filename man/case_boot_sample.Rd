@@ -4,7 +4,13 @@
 \alias{case_boot_sample}
 \title{case_boot_sample: bootstrap resampling function}
 \usage{
-case_boot_sample(df, y, sample = TRUE, sample_num = 1)
+case_boot_sample(
+  df,
+  y,
+  random_type = c("intercept", "slope"),
+  sample = TRUE,
+  sample_num = 1
+)
 }
 \arguments{
 \item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one

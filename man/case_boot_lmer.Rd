@@ -4,7 +4,13 @@
 \alias{case_boot_lmer}
 \title{case_boot_lmer: run case bootstrap for random intercept model and return model output}
 \usage{
-case_boot_lmer(df, y, num_reps, chatty = TRUE)
+case_boot_lmer(
+  df,
+  y,
+  random_type = c("intercept", "slope"),
+  num_reps,
+  chatty = TRUE
+)
 }
 \arguments{
 \item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
