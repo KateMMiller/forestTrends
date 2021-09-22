@@ -8,8 +8,11 @@
 #'
 #' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 #' response variable.
+#' @param x Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.
 #' @param y Quoted response variable in the data frame.
-#' @random_type intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
+#' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
+#' are a park code.
+#' @param random_type intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
 #' random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)
 #' @param sample TRUE or FALSE. TRUE (default) will generate a bootstrapped sample of the specified data frame. FALSE will
 #' run trend_fun() on the original dataset.
@@ -27,20 +30,26 @@
 #'                       cycle = rep(1:3, times = 9),
 #'                       resp = runif(27, 0, 20))
 #'
-#' boot_ex <- case_boot_sample(fake_df, y = "resp", sample = TRUE)
+#' boot_ex <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
+#'   random_type = "intercept", sample = TRUE)
 #'
 #' }
 #'
 #' @export
 
-case_boot_sample <- function(df, y, random_type = c('intercept', 'slope'), sample = TRUE, sample_num = 1){
+case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", random_type = c("intercept", "slope"),
+                             sample = TRUE, sample_num = 1){
 
-  if(!"Plot_Name" %in% names(df)){stop('Must have column named "Plot_Name" to run function')}
-  if(!"cycle" %in% names(df)){stop('Must have column named "cycle" to run function')}
+  if(missing(df)){stop("Must specify df to run function")}
+  if(missing(x)){stop("Must specify x variable to run function")}
   if(missing(y)){stop("Must specify y variable to run function")}
+  if(missing(ID)){stop("Must specify ID variable to run function")}
   random_type <- match.arg(random_type)
+  stopifnot(c(x, y, ID) %in% names(df))
+  # stopifnot(is.numeric(df[,x]))
+  # stopifnot(is.numeric(df[,y]))
 
-  plots <- data.frame(Plot_Name = unique(df$Plot_Name))
+  plots <- data.frame(Plot_Name = unique(df[,ID]))
   n <- nrow(plots)
 
   samp <- if(sample == TRUE){
@@ -51,10 +60,11 @@ case_boot_sample <- function(df, y, random_type = c('intercept', 'slope'), sampl
   # set up unique naming column, so plots selected more than once have a unique ID.
   samp$case <- as.factor(stringr::str_pad(rownames(samp), nchar(n), side ="left", pad = 0))
 
-  df_samp <- dplyr::left_join(samp, df[,c("Plot_Name", "cycle", y)], by = c("Plot_Name")) %>%
-    dplyr::arrange(Plot_Name, case, cycle)
+  df_samp <- dplyr::left_join(samp, df[,c(ID, x, y)], by = c(ID)) %>%
+    dplyr::arrange(case, x)
 
-  mod <- suppressMessages(trend_fun(df_samp, y = y, random_type = random_type)) %>%
+  mod <- suppressMessages(
+    trend_fun(df_samp, x = x, y = y, ID = ID, random_type = random_type)) %>%
     dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
 
   chatty <- ifelse(exists("chatty"), chatty, TRUE)
