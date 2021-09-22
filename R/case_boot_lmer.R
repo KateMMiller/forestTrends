@@ -81,7 +81,9 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   grp <- ifelse(!is.na(group), paste(unique(df[,group])),
                                  paste(pname1))
 
-  nplots <- nrow(unique(df[,ID]))
+  plots <- data.frame(unique(df[,1]))
+
+  nplots <- nrow(unique(plots))
 
   if(chatty == TRUE){cat(grp)}
 
