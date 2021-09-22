@@ -4,13 +4,27 @@
 \alias{trend_fun}
 \title{trend_fun: fit random intercept model and return results of interest}
 \usage{
-trend_fun(df, y, random_type = c("intercept", "slope"))
+trend_fun(
+  df,
+  x = "cycle",
+  y,
+  ID = "Plot_Name",
+  group,
+  random_type = c("intercept", "slope")
+)
 }
 \arguments{
 \item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 response variable.}
 
+\item{x}{Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.}
+
 \item{y}{Quoted response variable in the data frame.}
+
+\item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
+are a park code.}
+
+\item{group}{Quoted column containing a grouping variable, like "Unit_ID" for printing progress to console.}
 }
 \description{
 fit random intercept model using Plot_Name, and return intercept, slope and predicted responses for
@@ -21,6 +35,7 @@ but can be used as a stand alone function.
 \dontrun{
 library(magrittr)
 fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
+                      group = "PARK",
                       cycle = rep(1:3, times = 9),
                       resp = runif(27, 0, 20))
 
