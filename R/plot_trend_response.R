@@ -55,17 +55,28 @@
 
 plot_trend_response <- function(df, xlab, ylab, group = NA){
 
-  df2 <- df %>%
-           mutate(sign = ifelse(term == "Slope" & (lower95 > 0 | upper95 < 0), "sign", "nonsign")) %>%
-           filter(!term %in% c("Intercept", "Slope"))
+    group_sym <- sym(group)
+
+    df2 <- if(!is.na(group)){
+            left_join(df,
+                      df %>% filter(term == "Slope") %>%
+                             mutate(sign = ifelse(lower95 > 0 | upper95 < 0, "sign", "nonsign")) %>%
+                             select(!!group_sym, sign),
+                      by = group) %>%
+             filter(!term %in% c("Intercept", "Slope"))
+         } else {
+            df %>% mutate(sign = ifelse(term == "Slope" & (lower95 > 0 | upper95 < 0), "sign", "nonsign")) %>%
+            filter(!term %in% c("Intercept", "Slope"))
+           }
 
   df2$time <- as.numeric(gsub("\\D", "", df2$term))
 
   p <-
     ggplot(df2, aes(x = time, y = estimate, shape = sign, linetype = sign))+
-       geom_point()+
+       geom_point(na.rm = F)+
        geom_errorbar(aes(ymin = lower95, ymax = upper95),
-                     width = 0.2, size = 0.5, linetype = 'solid', na.rm = TRUE)+
+                     width = 0.2, size = 0.5, linetype = 'solid',
+                     na.rm = FALSE)+
        geom_line()+
        scale_linetype_manual(values = c('dashed', 'solid'))+
        scale_shape_manual(values = c(21, 19))+
