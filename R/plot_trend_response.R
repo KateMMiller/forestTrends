@@ -9,7 +9,7 @@
 #' @param group Quoted column for facet wraps. If not specified, only 1 plot will be returned
 #'
 #' @import ggplot2
-#' @importFrom dplyr filter mutate
+#' @importFrom dplyr case_when filter left_join mutate select
 #'
 #' @examples
 #' \dontrun{
@@ -60,26 +60,32 @@ plot_trend_response <- function(df, xlab, ylab, group = NA){
     df2 <- if(!is.na(group)){
             left_join(df,
                       df %>% filter(term == "Slope") %>%
-                             mutate(sign = ifelse(lower95 > 0 | upper95 < 0, "sign", "nonsign")) %>%
+                             mutate(sign = case_when(lower95 > 0 | upper95 < 0 ~ "sign",
+                                                     is.na(lower95) ~ "notmod",
+                                                     TRUE ~ "nonsign")) %>%
                              select(!!group_sym, sign),
                       by = group) %>%
              filter(!term %in% c("Intercept", "Slope"))
          } else {
-            df %>% mutate(sign = ifelse(term == "Slope" & (lower95 > 0 | upper95 < 0), "sign", "nonsign")) %>%
+            df %>% mutate(sign = case_when(lower95 > 0 | upper95 < 0 ~ "sign",
+                                           is.na(lower95) ~ "notmod",
+                                           TRUE ~ "nonsign")) %>%
             filter(!term %in% c("Intercept", "Slope"))
            }
 
-  df2$time <- as.numeric(gsub("\\D", "", df2$term))
+    df2$time <- as.numeric(gsub("\\D", "", df2$term))
 
   p <-
-    ggplot(df2, aes(x = time, y = estimate, shape = sign, linetype = sign))+
-       geom_point(na.rm = F)+
+    ggplot(df2, aes(x = time, y = estimate, shape = sign, linetype = sign, color = sign, fill = sign))+
        geom_errorbar(aes(ymin = lower95, ymax = upper95),
                      width = 0.2, size = 0.5, linetype = 'solid',
-                     na.rm = FALSE)+
-       geom_line()+
-       scale_linetype_manual(values = c('dashed', 'solid'))+
-       scale_shape_manual(values = c(21, 19))+
+                     na.rm = TRUE)+
+       geom_line(size = 0.5)+
+       geom_point(size = 2, shape = 21)+
+       scale_linetype_manual(values = c("notmod" = 'dashed', "nonsign" = 'dashed',
+                                        "sign" = 'solid'))+
+       scale_fill_manual(values = c("notmod" = 'white', "nonsign" = 'white', "sign" = 'black'))+
+       scale_color_manual(values = c("notmod" = "#ACACAC", "nonsign" = "black", "sign" = "black"))+
        theme(axis.text = element_text(size = 11),
              axis.title = element_text(size = 12),
              panel.background = element_blank(),
