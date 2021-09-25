@@ -6,17 +6,31 @@
 \usage{
 case_boot_lmer(
   df,
+  x = "cycle",
   y,
+  ID = "Plot_Name",
+  group = NA,
   random_type = c("intercept", "slope"),
   num_reps,
   chatty = TRUE
 )
 }
 \arguments{
-\item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
+\item{df}{Data frame containing a column called Plot_Name, a column containing a time variable, and a column with at least one
 response variable.}
 
+\item{x}{Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.}
+
 \item{y}{Quoted response variable in the data frame.}
+
+\item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
+are a park code.}
+
+\item{group}{Quote column containing a grouping variable, like "Unit_ID" for printing progress to console. If not specified,
+will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.}
+
+\item{random_type}{intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
+random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)}
 
 \item{num_reps}{Number of replicates to run in the bootstrap}
 
@@ -26,19 +40,42 @@ in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE wi
 \description{
 For each replicate, as specified by num_reps, function will generate a bootstrapped sample of data from the
 original dataset, fit a random intercept model for plot, and return the estimates for intercept, slope, and predicted
-values for mean response of each cycle, along with 95 % confidence intervals for each of these terms. The num_boots column
-is the number of bootstrapped samples that successfully fit an lmer model. If any singular fits are returned, a warning
-message is printed in the console to indicate number of bootstraps that returned singular fits, but the model results are
-stored and included in the confidence interval estimates.
+values for mean response of each unique time step (i.e., cycle or year), along with 95 % confidence intervals for each of
+these terms. The num_boots column is the number of bootstrapped samples that successfully fit an lmer model. If any singular
+fits are returned, a warning message is printed in the console to indicate number of bootstraps that returned singular fits,
+but the model results are stored and included in the confidence interval estimates. Note that this approach assumes that
+y ~ x is a linear relationships. If that assumption is violated, results may be incorrect.
 }
 \examples{
 \dontrun{
 
+#----- Dataset with 1 park -----
 fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
                       cycle = rep(1:3, times = 9),
                       resp = runif(27, 0, 20))
 
-boot1 <- case_boot_lmer(fake_df, y = "resp", num_reps = 10, chatty = TRUE)
+boot1 <- case_boot_lmer(fake_df, y = "resp", num_reps = 10, random_type = 'intercept', chatty = TRUE)
+
+#----- Dataset with 2 parks iterating through each park with purrr -----
+# Create fake dataset
+fake_2pk <- data.frame(Plot_Name = c(rep(paste0(rep("APRK-", 12), sprintf("\%02d", 1:12)), each = 3),
+                       rep(paste0(rep("BPRK-", 12), sprintf("\%02d", 13:24)), each = 3)),
+                       park = c(rep("APRK", 36), rep("BPRK", 36)),
+                       cycle = rep(1:3, times = 24),
+                       resp = runif(72, 0, 30))
+
+# Nest dataset by park
+nested_df <- fake_2pk \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
+
+# Run case_boot_lmer on nested dataset
+boot2 <- nested_df \%>\% mutate(
+  model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
+                                    random_type = 'intercept', group = "grp",
+                                    num_reps = 100, chatty = TRUE)))
+
+# Compile results
+boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
+
 
 }
 
