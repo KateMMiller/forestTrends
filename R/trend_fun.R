@@ -1,7 +1,7 @@
 #' trend_fun: fit random intercept model and return results of interest
 #'
 #' @description fit random intercept model using Plot_Name, and return intercept, slope and predicted responses for
-#' each cycle represented in the data. This is mostly an internal function run within case_boot_lmer(),
+#' each time step (i.e. cycle or year) represented in the data. This is mostly an internal function run within case_boot_lmer(),
 #' but can be used as a stand alone function.
 #'
 #' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
@@ -45,7 +45,7 @@ trend_fun <- function(df, x = "cycle", y, ID = "Plot_Name", random_type = c("int
 
   # set up model
   mod_df <- data.frame(term = c("Intercept", "Slope"), estimate = NA_real_)
-  pred_df <- data.frame(term = paste0("C", unique(df[,x]), "_response"),
+  pred_df <- data.frame(term = paste0(substr(x, 1, 1), unique(df[,x]), "_response"),
                         estimate = NA_real_)
 
   tryCatch(
