@@ -9,7 +9,6 @@ trend_fun(
   x = "cycle",
   y,
   ID = "Plot_Name",
-  group,
   random_type = c("intercept", "slope")
 )
 }
@@ -24,11 +23,12 @@ response variable.}
 \item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 are a park code.}
 
-\item{group}{Quoted column containing a grouping variable, like "Unit_ID" for printing progress to console.}
+\item{random_type}{intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
+random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)}
 }
 \description{
 fit random intercept model using Plot_Name, and return intercept, slope and predicted responses for
-each cycle represented in the data. This is mostly an internal function run within case_boot_lmer(),
+each time step (i.e. cycle or year) represented in the data. This is mostly an internal function run within case_boot_lmer(),
 but can be used as a stand alone function.
 }
 \examples{
@@ -39,7 +39,7 @@ fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
                       cycle = rep(1:3, times = 9),
                       resp = runif(27, 0, 20))
 
-mod <- trend_fun(fake_df, "resp")
+mod <- trend_fun(fake_df, x = "cycle", y = "resp", ID = "Plot_Name", random_type = "slope")
 }
 
 }

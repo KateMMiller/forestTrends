@@ -6,8 +6,12 @@
 \usage{
 case_boot_sample(
   df,
+  x = "cycle",
   y,
+  ID = "Plot_Name",
+  model_type = c("lmer", "loess"),
   random_type = c("intercept", "slope"),
+  span = NA_real_,
   sample = TRUE,
   sample_num = 1
 )
@@ -16,7 +20,22 @@ case_boot_sample(
 \item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 response variable.}
 
+\item{x}{Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.}
+
 \item{y}{Quoted response variable in the data frame.}
+
+\item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
+are a park code.}
+
+\item{model_type}{Options are "lmer" (Default) or "loess".}
+
+\item{random_type}{Options are intercept or slope. Required if model type is "lmer". The intercept option (default) will
+fit a random intercept on plot with (1|Plot_Name) as random component. The slope option will fit a random slope model
+with (1 + cycle|Plot_Name).}
+
+\item{span}{Numeric value that controls degree of smoothing. Used for model type "loess". If not specified and model type
+is loess, an optimum span will be determined using fANCOVA::loess.as(). Note that user-specified spans are preferred. For
+plots sampled every 4 years and year as the variable, span of 4 is appropriate. Similarly if cycle is used, span of 1 works well.}
 
 \item{sample}{TRUE or FALSE. TRUE (default) will generate a bootstrapped sample of the specified data frame. FALSE will
 run trend_fun() on the original dataset.}
@@ -36,8 +55,11 @@ fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
                       cycle = rep(1:3, times = 9),
                       resp = runif(27, 0, 20))
 
-boot_ex <- case_boot_sample(fake_df, y = "resp", sample = TRUE)
+boot_ex <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
+  model_tyle = 'lmer', random_type = "intercept", sample = TRUE)
 
+boot_l <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
+  model_type = 'loess', span = 1, sample = TRUE)
 }
 
 }
