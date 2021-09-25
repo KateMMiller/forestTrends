@@ -4,12 +4,13 @@
 #'
 #' @description For each replicate, as specified by num_reps, function will generate a bootstrapped sample of data from the
 #' original dataset, fit a random intercept model for plot, and return the estimates for intercept, slope, and predicted
-#' values for mean response of each cycle, along with 95 % confidence intervals for each of these terms. The num_boots column
-#' is the number of bootstrapped samples that successfully fit an lmer model. If any singular fits are returned, a warning
-#' message is printed in the console to indicate number of bootstraps that returned singular fits, but the model results are
-#' stored and included in the confidence interval estimates.
+#' values for mean response of each unique time step (i.e., cycle or year), along with 95 % confidence intervals for each of
+#' these terms. The num_boots column is the number of bootstrapped samples that successfully fit an lmer model. If any singular
+#' fits are returned, a warning message is printed in the console to indicate number of bootstraps that returned singular fits,
+#' but the model results are stored and included in the confidence interval estimates. Note that this approach assumes that
+#' y ~ x is a linear relationships. If that assumption is violated, results may be incorrect.
 #'
-#' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
+#' @param df Data frame containing a column called Plot_Name, a column containing a time variable, and a column with at least one
 #' response variable.
 #' @param x Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.
 #' @param y Quoted response variable in the data frame.
@@ -88,7 +89,8 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   if(chatty == TRUE){cat(grp)}
 
   real_mod <- suppressWarnings(case_boot_sample(df, x = x, y = y, ID = ID,
-                                                sample = F, sample_num = 1, random_type = random_type) %>%
+                                                sample = F, sample_num = 1, random_type = random_type,
+                                                model_type = 'lmer') %>%
                                  dplyr::select(-boot_num, -isSingular))
 
  if(nplots > 6){
@@ -96,7 +98,8 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
     suppressWarnings(purrr::map_df(seq_len(num_reps),
                                    ~case_boot_sample(df, x = x, y = y, ID = ID,
                                                      sample = T, sample_num = .x,
-                                                     random_type = random_type)) %>%
+                                                     random_type = random_type,
+                                                     model_type = 'lmer')) %>%
     tidyr::pivot_wider(names_from = term, values_from = estimate)) %>% data.frame()
 
 
