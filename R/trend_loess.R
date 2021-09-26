@@ -20,7 +20,6 @@
 #' generally recommended, depending on how wavy the line should to be.
 #' @importFrom magrittr %>%
 #' @importFrom dplyr filter select
-#' @importFrom fANCOVA loess.as
 #'
 #' @examples
 #' \dontrun{
