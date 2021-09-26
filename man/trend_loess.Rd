@@ -4,7 +4,7 @@
 \alias{trend_loess}
 \title{trend_loess: fit loess model and return results of interest}
 \usage{
-trend_loess(df, x = "cycle", y, ID = "Plot_Name", span = NA_real_)
+trend_loess(df, x = "cycle", y, ID = "Plot_Name", degree = 1, span = NA_real_)
 }
 \arguments{
 \item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
@@ -17,9 +17,16 @@ response variable.}
 \item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 are a park code.}
 
+\item{degree}{order of polynomial to fit. Values of 1 (Default) is linear, 2 is quadratic, etc. Degrees of 1 or 2 are
+generally recommended, depending on how wavy the line should to be.}
+
 \item{span}{numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
-and possibly over-fitting the curve. Higher values (e.g., 1) result is more smoothing and possibly under-fitting. If no
-span is specified, loess.as() will be used to determine the optimum span (Note: user specified is preferred).}
+and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
+You can calculate the number of time steps to include in the smoothing window by dividing p/n, where p is number of plots
+you want to be included per window and n is number of timesteps in the data. When plotting years, knowing that panels include
+4 years, it is generally safe to assume a linear response between 2 full cycles, and therefore use a span of 8/n. Note that
+if you specify degree = 1, then loess assumes a linear relationship within each span. If no span is specified, then
+fANCOVA::loess.as() will be used to determine the optimum span (Note: user specified is preferred).}
 }
 \description{
 fit a loess model using Plot_Name, and return predicted responses for each time steps represented in the

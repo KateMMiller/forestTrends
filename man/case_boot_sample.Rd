@@ -12,6 +12,7 @@ case_boot_sample(
   model_type = c("lmer", "loess"),
   random_type = c("intercept", "slope"),
   span = NA_real_,
+  degree = 1,
   sample = TRUE,
   sample_num = 1
 )
@@ -33,9 +34,16 @@ are a park code.}
 fit a random intercept on plot with (1|Plot_Name) as random component. The slope option will fit a random slope model
 with (1 + cycle|Plot_Name).}
 
-\item{span}{Numeric value that controls degree of smoothing. Used for model type "loess". If not specified and model type
-is loess, an optimum span will be determined using fANCOVA::loess.as(). Note that user-specified spans are preferred. For
-plots sampled every 4 years and year as the variable, span of 4 is appropriate. Similarly if cycle is used, span of 1 works well.}
+\item{span}{numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
+and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
+You can calculate the number of time steps to include in the smoothing window by dividing p/n, where p is number of plots
+you want to be included per window and n is number of timesteps in the data. When plotting years, knowing that panels include
+4 years, it is generally safe to assume a linear response between 2 full cycles, and therefore use a span of 8/n. Note that
+if you specify degree = 1, then loess assumes a linear relationship within each span. If no span is specified, then
+fANCOVA::loess.as() will be used to determine the optimum span (Note: user specified is preferred).}
+
+\item{degree}{order of polynomial to fit. Values of 1 (Default) is linear, 2 is quadratic, etc. Degrees of 1 or 2 are
+generally recommended, depending on how wavy the line should to be.}
 
 \item{sample}{TRUE or FALSE. TRUE (default) will generate a bootstrapped sample of the specified data frame. FALSE will
 run trend_fun() on the original dataset.}

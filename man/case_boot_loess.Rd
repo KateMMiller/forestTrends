@@ -11,6 +11,7 @@ case_boot_loess(
   ID = "Plot_Name",
   group = NA,
   span = NA_real_,
+  degree = 1,
   num_reps,
   chatty = TRUE
 )
@@ -29,9 +30,16 @@ are a park code.}
 \item{group}{Quote column containing a grouping variable, like "Unit_ID" for printing progress to console. If not specified,
 will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.}
 
-\item{span}{Numeric value that controls degree of smoothing. Used for model type loess. If not specified and model type
-is loess, an optimum span will be determined using fANCOVA::loess.as(). Note that user-specified spans are preferred. For
-plots sampled every 4 years and year as the variable, span of 4 is appropriate. Similarly if cycle is used, span of 1 works well.}
+\item{span}{numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
+and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
+You can calculate the number of time steps to include in the smoothing window by dividing p/n, where p is number of plots
+you want to be included per window and n is number of timesteps in the data. When plotting years, knowing that panels include
+4 years, it is generally safe to assume a linear response between 2 full cycles, and therefore use a span of 8/n. Note that
+if you specify degree = 1, then loess assumes a linear relationship within each span. If no span is specified, then
+fANCOVA::loess.as() will be used to determine the optimum span (Note: user specified is preferred).}
+
+\item{degree}{order of polynomial to fit. Values of 1 (Default) is linear, 2 is quadratic, etc. Degrees of 1 or 2 are
+generally recommended, depending on how wavy the line should to be.}
 
 \item{num_reps}{Number of replicates to run in the bootstrap}
 
@@ -52,7 +60,7 @@ fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
                       cycle = rep(1:3, times = 9),
                       resp = runif(27, 0, 20))
 
-boot1 <- case_boot_lmer(fake_df, y = "resp", num_reps = 10, random_type = 'intercept', chatty = TRUE)
+boot1 <- case_boot_loess(fake_df, y = "resp", num_reps = 10, span = 0.9, chatty = TRUE)
 
 #----- Dataset with 2 parks iterating through each park with purrr -----
 # Create fake dataset
@@ -65,14 +73,14 @@ fake_2pk <- data.frame(Plot_Name = c(rep(paste0(rep("APRK-", 12), sprintf("\%02d
 # Nest dataset by park
 nested_df <- fake_2pk \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
 
-# Run case_boot_lmer on nested dataset
+# Run case_boot_loess on nested dataset
 boot2 <- nested_df \%>\% mutate(
   model = map(data, ~case_boot_loess(., x = "cycle", y = "resp", ID = "Plot_Name",
-                                    span = 1, group = "grp",
+                                    span = 0.95, group = "grp",
                                     num_reps = 100, chatty = TRUE)))
 
 # Compile results
-boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
+boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model)
 
 
 }

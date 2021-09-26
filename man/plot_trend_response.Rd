@@ -4,7 +4,16 @@
 \alias{plot_trend_response}
 \title{plot_trend_response: Plots response with CIs using output from case_boot_lmer}
 \usage{
-plot_trend_response(df, xlab, ylab, group = NA)
+plot_trend_response(
+  df,
+  xlab,
+  ylab,
+  model_type = c("lmer", "loess"),
+  group = NA,
+  ribbon = FALSE,
+  sign_color = c("#ACACAC", "black", "black", "black"),
+  facet_scales = c("fixed")
+)
 }
 \arguments{
 \item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
@@ -15,6 +24,17 @@ response variable. If Unit_Code is in the data frame, then a facet by park will 
 \item{ylab}{Quoted title for y axis.}
 
 \item{group}{Quoted column for facet wraps. If not specified, only 1 plot will be returned}
+
+\item{ribbon}{Options are TRUE or FALSE (Default). If TRUE, will plot error as a ribbon instead of errorbars.}
+
+\item{sign_color}{String of 4 colors to indicate a trend that is not modeled, not significant or significant increase
+or significant decrease. Default is c("#ACACAC", "black", "black", "black"), the first color being a shade of grey.
+Lines and outlines will be color coded based on this parameter. Symbols on the plot will only be filled if there's a
+significant trend. Note that for the loess model, significance is determined by comparing the confidence intervals
+of the first time step to the last time step. If there is no overlap, the trend is considered significant.}
+
+\item{facet_scales}{Options are "fixed" (Default), "free", "free_y", "free_x". Fixed means all axes will be identical among facets.
+Free means axes will vary by facets.}
 }
 \description{
 Function plots response of
