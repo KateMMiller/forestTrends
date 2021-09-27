@@ -9,12 +9,14 @@
 #' @param group Quoted column for facet wraps. If not specified, only 1 plot will be returned
 #' @param ribbon Options are TRUE or FALSE (Default). If TRUE, will plot error as a ribbon instead of errorbars.
 #' @param sign_color String of 4 colors to indicate a trend that is not modeled, not significant or significant increase
-#' or significant decrease. Default is c("#ACACAC", "black", "black", "black"), the first color being a shade of grey.
-#' Lines and outlines will be color coded based on this parameter. Symbols on the plot will only be filled if there's a
-#' significant trend. Note that for the loess model, significance is determined by comparing the confidence intervals
-#' of the first time step to the last time step. If there is no overlap, the trend is considered significant.
-#' @param facet_scales Options are "fixed" (Default), "free", "free_y", "free_x". Fixed means all axes will be identical among facets.
-#' Free means axes will vary by facets.
+#' or significant decrease. Default is c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"), which are light grey, dark grey,
+#' forest green and a shade of red. Lines and outlines will be color coded based on this parameter. Ribbons and error bars
+#' will only plot if trends were modeled (eg park had > 6 plots). Note that for the loess model, significance is determined by
+#' comparing the confidence intervals of the first time step to the last time step. If there is no overlap, the trend is
+#' considered significant.
+#' @param facet_scales Options are "fixed" (Default), "free", "free_y", "free_x". Fixed means all axes will be
+#' identical among facets. Free means axes will vary by facets.
+#' @param ptsize Size of points to be plotted. Default is 1. Must be numeric.
 #' @import ggplot2
 #' @importFrom dplyr case_when filter first last left_join mutate select
 #'
@@ -28,7 +30,7 @@
 #'
 #' boot1 <- case_boot_lmer(fake_df, y = "resp", num_reps = 10, random_type = 'intercept', chatty = TRUE)
 #'
-#' plot_trend_response(boot1, xlab = 'cycle', ylab = 'BA') +
+#' plot_trend_response(boot1, xlab = 'cycle', ylab = 'BA', model_type = 'lmer') +
 #'   scale_x_continuous(breaks = c(1, 2, 3), labels = c("1", "2", "3"))
 #'
 #'
@@ -45,15 +47,16 @@
 #'
 #' # Run case_boot_lmer on nested dataset
 #' boot2 <- nested_df %>% mutate(
-#'   model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
-#'                                     random_type = 'intercept', group = "grp",
+#'   model = map(data, ~case_boot_loess(., x = "cycle", y = "resp", ID = "Plot_Name",
+#'                                     span = 0.75, group = "grp",
 #'                                     num_reps = 100, chatty = TRUE)))
 #'
 #' # Compile results
 #' boot_results <- boot2 %>% select(park, model) %>% unnest(model) %>% select(-num_boots)
 #'
 #' # Plot results
-#' plot_trend_response(boot_results, xlab = "Cycle", ylab = "BA", group = "park") +
+#' plot_trend_response(boot_results, xlab = "Cycle", ylab = "BA", group = "park", ribbon = T,
+#'                     facet_scales = "free") +
 #'   scale_x_continuous(breaks = c(1, 2, 3), labels = c("1", "2", "3"))
 
 #' }
@@ -61,8 +64,8 @@
 #' @export
 
 plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'), group = NA,
-                                ribbon = FALSE, sign_color = c("#ACACAC", "black", "black", "black"),
-                                facet_scales = c("fixed")){
+                                ribbon = FALSE, sign_color = c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"),
+                                facet_scales = c("fixed"), ptsize = 1){
 
     match.arg(facet_scales, c("fixed", "free", "free_y", "free_x"))
 
@@ -71,6 +74,8 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
     if(length(sign_color) < 4){
       warning(paste0("Only specified ", length(sign_color), " colors instead of 4. Will replace missing color with black by default"))
       sign_color <- c(sign_color, rep("black", 4-length(sign_color)))}
+
+    df$time <- as.numeric(gsub("\\D", "", df$term))
 
     df2 <- if(model_type == "lmer"){
                if(!is.na(group)){
@@ -92,7 +97,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
          }
     } else if (model_type == "loess"){
                if(!is.na(group)){
-                 left_join(df, df %>% arrange(x) %>% group_by(!!group_sym) %>%
+                 left_join(df, df %>% arrange(time) %>% group_by(!!group_sym) %>%
                                  summarize(up_first = first(upper95),
                                            up_last = last(upper95),
                                            lo_first = first(lower95),
@@ -103,7 +108,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
                                                             TRUE ~ "nonsign")) %>%
                                  select(!!group_sym, sign), by = group)
                } else {
-                 cbind(df, df %>% arrange(x) %>%
+                 cbind(df, df %>% arrange(time) %>%
                                summarize(up_first = first(upper95),
                                          up_last = last(upper95),
                                          lo_first = first(lower95),
@@ -132,7 +137,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
                                       #color = "#CACACA",
                                       lty = 1, alpha = 0.2, na.rm = TRUE)}+
        geom_line(size = 0.5)+
-       geom_point(size = 2, shape = 21, alpha = 0.8)+
+       geom_point(size = ptsize, shape = 21, alpha = 0.8)+
        scale_linetype_manual(values = c("notmod" = 'dashed', "nonsign" = 'dashed',
                                         "signinc" = 'solid', "signdec" = 'solid'))+
        scale_fill_manual(values = c("notmod" = "white", "nonsign" =  sign_color[2],
@@ -162,7 +167,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
                                         #color = "#CACACA",
                                         lty = 1, alpha = 0.2, na.rm = TRUE)}+
         geom_line(size = 0.5)+
-        geom_point(size = 2, shape = 21, alpha = 0.8)+
+        geom_point(size = ptsize, shape = 21, alpha = 0.8)+
         scale_linetype_manual(values = c("notmod" = 'dashed', "nonsign" = 'dashed',
                                          "signinc" = 'solid', "signdec" = 'solid'), drop = FALSE)+
         #scale_fill_manual(values = c("notmod" = 'white', "nonsign" = 'white', "sign" = 'black'))+

@@ -11,8 +11,9 @@ plot_trend_response(
   model_type = c("lmer", "loess"),
   group = NA,
   ribbon = FALSE,
-  sign_color = c("#ACACAC", "black", "black", "black"),
-  facet_scales = c("fixed")
+  sign_color = c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"),
+  facet_scales = c("fixed"),
+  ptsize = 1
 )
 }
 \arguments{
@@ -28,13 +29,16 @@ response variable. If Unit_Code is in the data frame, then a facet by park will 
 \item{ribbon}{Options are TRUE or FALSE (Default). If TRUE, will plot error as a ribbon instead of errorbars.}
 
 \item{sign_color}{String of 4 colors to indicate a trend that is not modeled, not significant or significant increase
-or significant decrease. Default is c("#ACACAC", "black", "black", "black"), the first color being a shade of grey.
-Lines and outlines will be color coded based on this parameter. Symbols on the plot will only be filled if there's a
-significant trend. Note that for the loess model, significance is determined by comparing the confidence intervals
-of the first time step to the last time step. If there is no overlap, the trend is considered significant.}
+or significant decrease. Default is c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"), which are light grey, dark grey,
+forest green and a shade of red. Lines and outlines will be color coded based on this parameter. Ribbons and error bars
+will only plot if trends were modeled (eg park had > 6 plots). Note that for the loess model, significance is determined by
+comparing the confidence intervals of the first time step to the last time step. If there is no overlap, the trend is
+considered significant.}
 
-\item{facet_scales}{Options are "fixed" (Default), "free", "free_y", "free_x". Fixed means all axes will be identical among facets.
-Free means axes will vary by facets.}
+\item{facet_scales}{Options are "fixed" (Default), "free", "free_y", "free_x". Fixed means all axes will be
+identical among facets. Free means axes will vary by facets.}
+
+\item{ptsize}{Size of points to be plotted. Default is 1. Must be numeric.}
 }
 \description{
 Function plots response of
@@ -49,7 +53,7 @@ fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
 
 boot1 <- case_boot_lmer(fake_df, y = "resp", num_reps = 10, random_type = 'intercept', chatty = TRUE)
 
-plot_trend_response(boot1, xlab = 'cycle', ylab = 'BA') +
+plot_trend_response(boot1, xlab = 'cycle', ylab = 'BA', model_type = 'lmer') +
   scale_x_continuous(breaks = c(1, 2, 3), labels = c("1", "2", "3"))
 
 
@@ -66,15 +70,16 @@ nested_df <- fake_2pk \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
 
 # Run case_boot_lmer on nested dataset
 boot2 <- nested_df \%>\% mutate(
-  model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
-                                    random_type = 'intercept', group = "grp",
+  model = map(data, ~case_boot_loess(., x = "cycle", y = "resp", ID = "Plot_Name",
+                                    span = 0.75, group = "grp",
                                     num_reps = 100, chatty = TRUE)))
 
 # Compile results
 boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
 
 # Plot results
-plot_trend_response(boot_results, xlab = "Cycle", ylab = "BA", group = "park") +
+plot_trend_response(boot_results, xlab = "Cycle", ylab = "BA", group = "park", ribbon = T,
+                    facet_scales = "free") +
   scale_x_continuous(breaks = c(1, 2, 3), labels = c("1", "2", "3"))
 }
 
