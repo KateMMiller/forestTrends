@@ -1,6 +1,14 @@
-#' @title plot_trend_response: Plots response with CIs using output from case_boot_lmer
+#' @title plot_trend_response: Plots response with CIs using output from case_boot_lmer/loess
 #'
-#' @description Function plots response of
+#' @description Function plots predicted responses for each time step in the data and 95% confidence intervals
+#' around the response derived from case bootstrapping. For the lmer model, a trend is considered significant
+#' if the confidence interval of the slope does not contain 0. For the loess model, a trend is considered significant
+#' if the confidence intervals of the first and last time steps don't overlap. Note that specifying a window to test
+#' for significance (e.g. compare first 4 years vs. last 4 years) is in development. Significant trends are plotted
+#' as solid lines and filled symbols and a separate color (if specified) from non-significant trends. Non-significant
+#' trends are plotted as dashed lines with open symbols. For models with insufficient sample size for case bootstrap
+#' (<7 plots), the coefficients from the model on the raw data were plotted as dashed, light-grey lines without
+#' confidence intervals.
 #'
 #' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 #' response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.
@@ -17,6 +25,7 @@
 #' @param facet_scales Options are "fixed" (Default), "free", "free_y", "free_x". Fixed means all axes will be
 #' identical among facets. Free means axes will vary by facets.
 #' @param ptsize Size of points to be plotted. Default is 1. Must be numeric.
+#'
 #' @import ggplot2
 #' @importFrom dplyr case_when filter first last left_join mutate select
 #'
@@ -58,7 +67,6 @@
 #' plot_trend_response(boot_results, xlab = "Cycle", ylab = "BA", group = "park", ribbon = T,
 #'                     facet_scales = "free") +
 #'   scale_x_continuous(breaks = c(1, 2, 3), labels = c("1", "2", "3"))
-
 #' }
 #'
 #' @export
@@ -122,7 +130,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
 
                }
   }
-    df2$time <- as.numeric(gsub("\\D", "", df2$term))
+    #df2$time <- as.numeric(gsub("\\D", "", df2$term))
     # hacky way to plot groups that didn't get modeled and so don't have errorbars or ribbons
     df2$upper95 <- ifelse(is.na(df2$upper95), df2$estimate, df2$upper95)
     df2$lower95 <- ifelse(is.na(df2$lower95), df2$estimate, df2$lower95)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_trend_response.R
 \name{plot_trend_response}
 \alias{plot_trend_response}
-\title{plot_trend_response: Plots response with CIs using output from case_boot_lmer}
+\title{plot_trend_response: Plots response with CIs using output from case_boot_lmer/loess}
 \usage{
 plot_trend_response(
   df,
@@ -41,7 +41,15 @@ identical among facets. Free means axes will vary by facets.}
 \item{ptsize}{Size of points to be plotted. Default is 1. Must be numeric.}
 }
 \description{
-Function plots response of
+Function plots predicted responses for each time step in the data and 95% confidence intervals
+around the response derived from case bootstrapping. For the lmer model, a trend is considered significant
+if the confidence interval of the slope does not contain 0. For the loess model, a trend is considered significant
+if the confidence intervals of the first and last time steps don't overlap. Note that specifying a window to test
+for significance (e.g. compare first 4 years vs. last 4 years) is in development. Significant trends are plotted
+as solid lines and filled symbols and a separate color (if specified) from non-significant trends. Non-significant
+trends are plotted as dashed lines with open symbols. For models with insufficient sample size for case bootstrap
+(<7 plots), the coefficients from the model on the raw data were plotted as dashed, light-grey lines without
+confidence intervals.
 }
 \examples{
 \dontrun{
