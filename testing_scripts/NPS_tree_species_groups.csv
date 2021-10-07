@@ -1,0 +1,215 @@
+Species,Group,Canopy_Tree,Native
+Abies balsamea,Northern Conifer,1,1
+Acer,Acer sp.,1,1
+Acer floridanum,Other Native,1,1
+Acer negundo,Acer sp.,1,1
+Acer nigrum,Acer sp.,1,1
+Acer palmatum,Exotic,0,0
+Acer pensylvanicum,Acer sp.,0,1
+Acer platanoides,Exotic,0,0
+Acer rubrum,Acer rubrum,1,1
+Acer saccharinum,Acer sp.,1,1
+Acer saccharum,Acer saccharum,1,1
+Acer sp.,Acer sp.,1,1
+Acer spicatum,Acer sp.,0,1
+Aesculus flava,Other Native,1,1
+Aesculus hippocastanum,Exotic,0,0
+Ailanthus altissima,Exotic,0,0
+Albizia julibrissin,Exotic,1,0
+Alnus serrulata,Understory Tree,0,1
+Amelanchier,Amelanchier sp.,0,1
+Amelanchier arborea,Amelanchier sp.,0,1
+Amelanchier canadensis,Other Native,0,1
+Amelanchier laevis,Amelanchier sp.,0,1
+Amelanchier sp.,Amelanchier sp.,0,1
+Aralia elata,Exotic,0,0
+Aralia spinosa,Understory Tree,0,1
+Asimina triloba,Asimina triloba,0,1
+Betula,Betula sp.,1,1
+Betula alleghaniensis,Betula sp.,1,1
+Betula cordifolia,Betula sp.,1,1
+Betula lenta,Betula lenta,1,1
+Betula nigra,Betula sp.,1,1
+Betula papyrifera,Betula sp.,1,1
+Betula populifolia,Betula sp.,1,1
+Betula sp.,Betula sp.,1,1
+Betula X cearulea,Betula sp.,1,1
+Betulaceae,Other Native,1,1
+Carpinus caroliniana,Understory Tree,0,1
+Carya,Carya sp.,1,1
+Carya alba,Carya alba,1,1
+Carya cordiformis,Carya cordiformis,1,1
+Carya glabra,Carya glabra,1,1
+Carya laciniosa,Carya sp.,1,1
+Carya ovalis,Carya sp.,1,1
+Carya ovata,Carya sp.,1,1
+Carya sp.,Carya sp.,1,1
+Carya spp.,Carya sp.,1,1
+Carya tomentosa,Carya sp.,1,1
+Castanea dentata,Understory Tree,0,1
+Castanea pumila,Other Native,0,1
+Catalpa bignonioides,Exotic,0,0
+Catalpa sp.,Exotic,0,0
+Catalpa speciosa,Exotic,0,0
+Celtis laevigata,Other Native,1,1
+Celtis occidentalis,Celtis sp.,1,1
+Celtis sp.,Celtis sp.,1,1
+Cercis canadensis,Understory Tree,0,1
+Chionanthus virginicus,Understory Tree,0,1
+Cladrastis kentukea,Other Native,1,1
+Cornus alternifolia,Understory Tree,0,1
+Cornus florida,Understory Tree,0,1
+Cornus sp.,Understory Tree,0,1
+Cornus spp.,Understory Tree,0,1
+Crataegus,Post Ag,0,0
+Crataegus crus-galli,Post Ag,0,0
+Crataegus macrosperma,Post Ag,0,1
+Crataegus sp.,Post Ag,0,0
+Crataegus sp. A,Post Ag,0,0
+Crataegus sp. B,Post Ag,0,0
+Diospyros virginiana,Diospyros virginiana,1,1
+Fabaceae,Post Ag,0,0
+Fagus grandifolia,Fagus grandifolia,1,1
+Fraxinus,Fraxinus sp.,1,1
+Fraxinus americana,Fraxinus americana,1,1
+Fraxinus nigra,Fraxinus sp.,1,1
+Fraxinus pennsylvanica,Fraxinus sp.,1,1
+Fraxinus profunda,Fraxinus sp.,1,1
+Fraxinus sp.,Fraxinus sp.,1,1
+Fraxinus spp.,Fraxinus sp.,1,1
+Gleditsia triacanthos,Other Native,0,1
+Gymnocladus dioicus,Other Native,1,1
+Halesia tetraptera,Other Native,1,1
+Ilex opaca,Ilex opaca,0,1
+Juglans,Juglans sp.,1,1
+Juglans cinerea,Juglans sp.,1,1
+Juglans nigra,Juglans sp.,1,1
+Juglans sp.,Juglans sp.,1,1
+Juniperus virginiana,Juniperus virginiana,0,1
+Larix decidua,Exotic,0,0
+Larix laricina,Northern Conifer,1,1
+Larix sp.,Exotic,0,0
+Ligustrum,Exotic,0,0
+Liquidambar styraciflua,Liquidambar styraciflua,1,1
+Liriodendron tulipifera,Liriodendron tulipifera,1,1
+Maclura pomifera,Other Native,1,1
+Magnolia acuminata,Magnolia sp.,1,1
+Magnolia fraseri,Magnolia sp.,1,1
+Magnolia grandiflora,Magnolia sp.,1,1
+Magnolia tripetala,Magnolia sp.,1,1
+Magnolia virginiana,Magnolia sp.,1,1
+Malus,Post Ag,0,0
+Malus baccata,Post Ag,0,0
+Malus coronaria,Post Ag,0,0
+Malus prunifolia,Post Ag,0,0
+Malus sieboldii,Post Ag,0,0
+Malus sp.,Post Ag,0,0
+Malus spp.,Post Ag,0,0
+Morella cerifera,Other Native,0,1
+Morus alba,Exotic,0,0
+Morus rubra,Other Native,0,1
+Nyssa biflora,Other Native,1,1
+Nyssa sylvatica,Nyssa sylvatica,1,1
+Ostrya virginiana,Understory Tree,0,1
+Oxydendrum arboreum,Understory Tree,0,1
+Paulownia tomentosa,Exotic,0,0
+Persea,Other Native,0,1
+Persea palustris,Understory Tree,0,1
+Phellodendron lavallei,Exotic,1,0
+Photinia villosa,Exotic,0,0
+Picea,Northern Conifer,1,1
+Picea abies,Exotic,0,0
+Picea glauca,Northern Conifer,1,1
+Picea mariana,Northern Conifer,1,1
+Picea rubens,Northern Conifer,1,1
+Pinus,Pinus sp.,1,1
+Pinus banksiana,Pinus sp.,1,1
+Pinus echinata,Pinus sp.,1,1
+Pinus pungens,Pinus sp.,1,1
+Pinus resinosa,Pinus sp.,1,1
+Pinus rigida,Pinus sp.,1,1
+Pinus sp.,Pinus sp.,1,1
+Pinus strobus,Pinus strobus,1,1
+Pinus sylvestris,Exotic,0,0
+Pinus taeda,Pinus sp.,1,1
+Pinus virginiana,Pinus virginiana,1,1
+Platanus occidentalis,Platanus occidentalis,1,1
+Populus,Populus sp.,1,1
+Populus alba,Exotic,1,0
+Populus deltoides,Populus sp.,1,1
+Populus grandidentata,Populus sp.,1,1
+Populus sp.,Other Native,1,1
+Populus tremuloides,Populus sp.,1,1
+Prunus,Prunus sp.,1,1
+Prunus americana,Prunus sp.,1,1
+Prunus avium,Exotic,0,0
+Prunus cerasus,Exotic,0,0
+Prunus pensylvanica,Prunus sp.,1,1
+Prunus serotina,Prunus serotina,1,1
+Prunus sp.,Prunus sp.,1,1
+Prunus spp.,Prunus sp.,1,1
+Prunus virginiana,Prunus sp.,1,1
+Pyrus,Post Ag,0,0
+Pyrus betulifolia,Post Ag,0,0
+Pyrus calleryana,Exotic,0,0
+Pyrus communis,Post Ag,0,0
+Pyrus pyrifolia,Post Ag,0,0
+Pyrus sp.,Post Ag,0,0
+Pyrus spp.,Post Ag,0,0
+Quercus,Quercus sp.,1,1
+Quercus (Red group),Quercus sp.,1,1
+Quercus (White group),Quercus sp.,1,1
+Quercus alba,Quercus alba,1,1
+Quercus bicolor,Quercus sp.,1,1
+Quercus coccinea,Quercus coccinea,1,1
+Quercus falcata,Quercus sp.,1,1
+Quercus illicifolia,Quercus sp.,0,0
+Quercus macrocarpa,Quercus sp.,1,1
+Quercus marilandica,Quercus sp.,1,1
+Quercus michauxii,Quercus sp.,1,1
+Quercus montana,Quercus sp.,1,1
+Quercus muehlenbergii,Quercus sp.,1,1
+Quercus nigra,Quercus sp.,1,1
+Quercus pagoda,Quercus sp.,1,1
+Quercus palustris,Quercus sp.,1,1
+Quercus phellos,Quercus sp.,1,1
+Quercus prinus,Quercus prinus,1,1
+Quercus rubra,Quercus rubra,1,1
+Quercus shumardii,Quercus sp.,1,1
+Quercus sp.,Quercus sp.,1,1
+Quercus spp.,Quercus sp.,1,1
+Quercus stellata,Quercus sp.,1,1
+Quercus velutina,Quercus velutina,1,1
+Quercus X benderi,Quercus sp.,1,1
+Quercus X bushii,Quercus sp.,1,1
+Quercus X fernowii,Quercus sp.,1,1
+Quercus X willdenowiana,Quercus sp.,1,1
+Rhamnus cathartica,Exotic,0,0
+Rhus typhina,Understory Tree,0,1
+Robinia pseudoacacia,Robinia pseudoacacia,0,1
+Rosaceae,Other Native,0,1
+Salix,Other Native,1,1
+Salix alba,Exotic,0,0
+Salix discolor,Other Native,1,1
+Sassafras albidum,Understory Tree,0,1
+Sophora japonica,Exotic,0,0
+Sorbus americana,Understory Tree,0,1
+Thuja occidentalis,Other Native,1,1
+Tilia americana,Tilia americana,1,1
+Tsuga canadensis,Tsuga canadensis,1,1
+Ulmus,Ulmus sp.,1,1
+Ulmus alata,Ulmus sp.,1,1
+Ulmus americana,Ulmus americana,1,1
+Ulmus pumila,Exotic,0,0
+Ulmus rubra,Ulmus sp.,1,1
+Ulmus sp.,Ulmus sp.,1,1
+Ulmus spp.,Ulmus sp.,1,1
+Unknown Conifer,Other Native,1,1
+Unknown Hardwood,Other Native,1,1
+Unknown species,Other Native,1,1
+Unknown Tree,Other Native,1,1
+Unknown Tree ,Other Native,1,1
+Unknown Tree - 01,Other Native,1,1
+Unknown Tree - 02,Other Native,1,1
+Unknown Tree - 04,Other Native,1,1
+Viburnum prunifolium,Understory Tree,0,1
