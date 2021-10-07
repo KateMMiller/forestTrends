@@ -13,6 +13,7 @@ plot_trend_response(
   ribbon = FALSE,
   sign_color = c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"),
   facet_scales = c("fixed"),
+  facet_cols = 4,
   ptsize = 1
 )
 }
@@ -37,6 +38,8 @@ considered significant.}
 
 \item{facet_scales}{Options are "fixed" (Default), "free", "free_y", "free_x". Fixed means all axes will be
 identical among facets. Free means axes will vary by facets.}
+
+\item{facet_cols}{Number of columns for facet wrap. Default is 4.}
 
 \item{ptsize}{Size of points to be plotted. Default is 1. Must be numeric.}
 }

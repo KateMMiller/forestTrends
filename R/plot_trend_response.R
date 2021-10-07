@@ -24,6 +24,7 @@
 #' considered significant.
 #' @param facet_scales Options are "fixed" (Default), "free", "free_y", "free_x". Fixed means all axes will be
 #' identical among facets. Free means axes will vary by facets.
+#' @param facet_cols Number of columns for facet wrap. Default is 4.
 #' @param ptsize Size of points to be plotted. Default is 1. Must be numeric.
 #'
 #' @import ggplot2
@@ -73,7 +74,7 @@
 
 plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'), group = NA,
                                 ribbon = FALSE, sign_color = c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"),
-                                facet_scales = c("fixed"), ptsize = 1){
+                                facet_scales = c("fixed"), facet_cols = 4, ptsize = 1){
 
     match.arg(facet_scales, c("fixed", "free", "free_y", "free_x"))
 
@@ -163,7 +164,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
              panel.grid.minor = element_blank(),
              panel.border = element_rect(colour = "black", fill = NA, size = 0.1),
              legend.position = 'none')+
-       {if(!is.na(group)) facet_wrap(~df2[[group]], drop = FALSE, scales = facet_scales)}+
+       {if(!is.na(group)) facet_wrap(~df2[[group]], drop = FALSE, scales = facet_scales, ncol = facet_cols)}+
        #scale_x_continuous(breaks = xbreaks, labels = xlabels)+
        labs(x = xlab, y = ylab)
     } else if(model_type == "loess"){
@@ -191,7 +192,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
               panel.grid.minor = element_blank(),
               panel.border = element_rect(colour = "black", fill = NA, size = 0.1),
               legend.position = 'none')+
-        {if(!is.na(group)) facet_wrap(~df2[[group]], drop = FALSE, scales = facet_scales)}+
+        {if(!is.na(group)) facet_wrap(~df2[[group]], drop = FALSE, scales = facet_scales, ncol = facet_cols)}+
         #scale_x_continuous(breaks = xbreaks, labels = xlabels)+
         labs(x = xlab, y = ylab)
       }
