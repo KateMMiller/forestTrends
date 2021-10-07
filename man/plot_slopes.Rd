@@ -34,3 +34,46 @@ then points and lines will be color coded by network, where ERMN is blue, MIDN i
 \description{
 Function plots the slopes from case_boot_lmer output
 }
+\examples{
+\dontrun{
+#----- Example if running for first time -----
+boot_results <- map2_df(park_list, met_list,
+                        function(park, y){case_boot_lmer(df = dens_df \%>\% filter(Unit_Code == park),
+                                                         x = "cycle", y = y, ID = "Plot_Name",
+                                                         random_type = 'intercept',
+                                                         num_reps = 1000, chatty = TRUE) \%>\%
+                            mutate(park = paste(park), resp = paste(y))})
+write.csv(boot_results, "all_metrics_randint_results.csv")
+
+plot_slopes(boot_results, ylabel = "Change in Sapling Density (stems/ha) per cycle",
+            metric = "Sap_Dens_Total", order = "park", sign_only = TRUE)
+
+
+#----- Example for loading results of previous step -----
+# Takes output in form of csv and uses deer browse index to order parks
+# and color code by Network (requires joining some dataframes together).
+
+boot_results <- read.csv("all_metrics_randint_results.csv")
+dbi <- read.csv("EFWG_park-level_DBI_rank.csv") \%>\% select(Unit_Code, DBI_rank)
+plots <- read.csv("EFWG_full_dataset.csv") \%>\% select(Unit_Code, Network) \%>\% unique()
+
+boot_results_final <- left_join(boot_results, dbi, by = c("park" = "Unit_Code")) \%>\%
+                      left_join(., plots, by = c("park" = "Unit_Code"))
+
+boot_results_final$park_ord <- reorder(boot_results_final$park, boot_results_final$DBI_rank)
+
+#--- Plot slopes using the park_ord field, which is sorted high to low on DBI_rank, and color code by Network
+plot_slopes(boot_results_final, ylabel = "Change in Sapling Density (stems/ha) per cycle",
+           metric = "Sap_Dens_NatCan", order = "park_ord", group = "Network")
+
+#--- Plot slopes using park_ord field, and color code by whether significant trend or not
+plot_slopes(boot_results_final, ylabel = 'test', metric = "Seed_Dens_NatCan", order = 'park_ord',
+group = 'sign')
+
+#--- Plot only significant slopes using the park_ord field, which is sorted high to low on DBI_rank,
+# and color code by Network
+
+plot_slopes(boot_results_final, ylabel = "Change in Sapling Density (stems/ha) per cycle",
+           metric = "Sap_Dens_NatCan", order = "park_ord", group = "Network", sign_only = TRUE)
+}
+}

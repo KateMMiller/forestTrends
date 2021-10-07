@@ -16,7 +16,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' #----- Example if running for first time
+#' #----- Example if running for first time -----
 #' boot_results <- map2_df(park_list, met_list,
 #'                         function(park, y){case_boot_lmer(df = dens_df %>% filter(Unit_Code == park),
 #'                                                          x = "cycle", y = y, ID = "Plot_Name",
@@ -28,13 +28,14 @@
 #' plot_slopes(boot_results, ylabel = "Change in Sapling Density (stems/ha) per cycle",
 #'             metric = "Sap_Dens_Total", order = "park", sign_only = TRUE)
 #'
-#' #--------------
-#' #----- Example for loading results of previous step from csv using deer browse index to order parks
+#'
+#' #----- Example for loading results of previous step -----
+#' # Takes output in form of csv and uses deer browse index to order parks
 #' # and color code by Network (requires joining some dataframes together).
 #'
 #' boot_results <- read.csv("all_metrics_randint_results.csv")
 #' dbi <- read.csv("EFWG_park-level_DBI_rank.csv") %>% select(Unit_Code, DBI_rank)
-#' plots <- read.csv(EFWG_full_dataset.csv") %>% select(Unit_Code, Network) %>% unique()
+#' plots <- read.csv("EFWG_full_dataset.csv") %>% select(Unit_Code, Network) %>% unique()
 #'
 #' boot_results_final <- left_join(boot_results, dbi, by = c("park" = "Unit_Code")) %>%
 #'                       left_join(., plots, by = c("park" = "Unit_Code"))
@@ -54,7 +55,7 @@
 #'
 #' plot_slopes(boot_results_final, ylabel = "Change in Sapling Density (stems/ha) per cycle",
 #'            metric = "Sap_Dens_NatCan", order = "park_ord", group = "Network", sign_only = TRUE)
-#'
+#' }
 #' @export
 
 
