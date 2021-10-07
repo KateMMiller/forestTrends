@@ -94,15 +94,15 @@ plot_slopes <- function(df, ylabel, metric, order = NA, group = NA, sign_only = 
                      stroke = 1, size = 2, shape = 21, color = 'DimGrey')+
           {if(!is.na(group)){
               if(group == "Network"){
-                scale_fill_manual(values = c("ERMN" = "#65A1CA", "MIDN" = "#FFC25F",
-                                             "NCRN" = "#DFE55B", "NETN" = "#6CCA65"),
+                scale_fill_manual(values = c("ERMN" = "#A5BDCD", "MIDN" = "#E7CDA4", "NCBN" = "#CFB9D9",
+                                             "NCRN" = "#E1E59B", "NETN" = "#AACCA7"),
                                   name = "Network")
               } else {scale_fill_brewer()}
             }}+
           {if(!is.na(group)){
               if(group == "Network"){
-                scale_color_manual(values = c("ERMN" = "#65A1CA", "MIDN" = "#FFC25F",
-                                              "NCRN" = "#DFE55B", "NETN" = "#6CCA65"),
+                scale_color_manual(values = c("ERMN" = "#A5BDCD", "MIDN" = "#E7CDA4", "NCBN" = "#CFB9D9",
+                                              "NCRN" = "#E1E59B", "NETN" = "#AACCA7"),
                                    name = "Network")
             } else {scale_color_brewer()}
             }}+
