@@ -80,10 +80,10 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", model_type = 
   mod <-
     if(model_type == "lmer"){
     suppressMessages(
-      trend_fun(df_samp, x = x, y = y, ID = ID, random_type = random_type)) %>%
+      trend_fun(df_samp, x = x, y = y, ID = "case", random_type = random_type)) %>%
         dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
     } else if(model_type == "loess"){
-      suppressMessages(trend_loess(df_samp, x = x, y = y, ID = ID, span = span, degree = degree))%>%
+      suppressMessages(trend_loess(df_samp, x = x, y = y, ID = "case", span = span, degree = degree))%>%
         dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
     }
 
