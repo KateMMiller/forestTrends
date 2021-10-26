@@ -42,7 +42,7 @@
 #'                       resp = runif(27, 0, 20))
 #'
 #' boot_ex <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
-#'   model_tyle = 'lmer', random_type = "intercept", sample = TRUE)
+#'   model_type = 'lmer', random_type = "intercept", sample = TRUE)
 #'
 #' boot_l <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
 #'   model_type = 'loess', span = 1, sample = TRUE)
