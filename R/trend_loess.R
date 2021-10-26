@@ -23,7 +23,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' library(magrittr)
+#'
 #' fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
 #'                       group = "PARK",
 #'                       cycle = rep(1:3, times = 9),
@@ -42,11 +42,11 @@ trend_loess <- function(df, x = "cycle", y, ID = "Plot_Name", degree = 1, span =
     stop("Package 'fANCOVA' needed to find optimal span. Please install it.", call. = FALSE)
   }
 
-  if(missing(df)){stop("Must specify df to run function")}
-  if(missing(x)){stop("Must specify x variable to run function")}
-  if(missing(y)){stop("Must specify y variable to run function")}
-  if(missing(ID)){stop("Must specify ID variable to run function")}
-  if(missing(span)){warning("Span not specified. Will use gcv to determine best span.")}
+  if(is.null(df)){stop("Must specify df to run function")}
+  if(is.null(x)){stop("Must specify x variable to run function")}
+  if(is.null(y)){stop("Must specify y variable to run function")}
+  if(is.null(ID)){stop("Must specify ID variable to run function")}
+  if(is.null(span)){warning("Span not specified. Will use gcv to determine best span.")}
   stopifnot(c(x, y, ID) %in% names(df))
   stopifnot(is.numeric(df[,x]) | is.integer(df[,x]))
   stopifnot(is.numeric(df[,y]) | is.integer(df[,y]))
