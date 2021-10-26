@@ -17,56 +17,55 @@
 #' @examples
 #' \dontrun{
 #' #----- Example if running for first time -----
-#' boot_results <- map2_df(park_list, met_list,
-#'                         function(park, y){case_boot_lmer(df = dens_df %>% filter(Unit_Code == park),
-#'                                                          x = "cycle", y = y, ID = "Plot_Name",
-#'                                                          random_type = 'intercept',
-#'                                                          num_reps = 1000, chatty = TRUE) %>%
-#'                             mutate(park = paste(park), resp = paste(y))})
-#' write.csv(boot_results, "all_metrics_randint_results.csv")
 #'
-#' plot_slopes(boot_results, ylabel = "Change in Sapling Density (stems/ha) per cycle",
-#'             metric = "Sap_Dens_Total", order = "park", sign_only = TRUE)
+#' library(forestTrends)
+#' library(tidyverse)
+#' #----- Example if running for first time -----
+#' fake_2pk <- data.frame(Plot_Name = c(rep(paste0(rep("APRK-", 12), sprintf("%02d", 1:12)), each = 3),
+#'                                      rep(paste0(rep("BPRK-", 40), sprintf("%02d", 13:53)), each = 3)),
+#'                      Park = c(rep("APRK", 36), rep("BPRK", 123)),
+#'                        cycle = rep(1:3, times = 53),
+#'                        resp1 = runif(159, 0, 30))
+#'
+#' fake_2pk$resp2 <- 1 + fake_2pk$cycle * 0.5 + rnorm(159)
 #'
 #'
-#' #----- Example for loading results of previous step -----
-#' # Takes output in form of csv and uses deer browse index to order parks
-#' # and color code by Network (requires joining some dataframes together).
 #'
-#' boot_results <- read.csv("all_metrics_randint_results.csv")
-#' dbi <- read.csv("EFWG_park-level_DBI_rank.csv") %>% select(Unit_Code, DBI_rank)
-#' plots <- read.csv("EFWG_full_dataset.csv") %>% select(Unit_Code, Network) %>% unique()
+#' # Run case_boot_lmer iterating on park and response variable
+#' boot2 <- map2_df(rep(c("APRK", "BPRK"), each = 2), rep(c('resp1', 'resp2'), times = 2),
+#'                  function(park, y){case_boot_lmer(df = fake_2pk %>% filter(Park == park),
+#'                                                   x = "cycle", y = y, ID = "Plot_Name",
+#'                                                   random_type = 'intercept',
+#'                                                   num_reps = 100, chatty = TRUE) %>%
+#'                      mutate(park = paste(park), resp = paste(y))})
 #'
-#' boot_results_final <- left_join(boot_results, dbi, by = c("park" = "Unit_Code")) %>%
-#'                       left_join(., plots, by = c("park" = "Unit_Code"))
 #'
-#' boot_results_final$park_ord <- reorder(boot_results_final$park, boot_results_final$DBI_rank)
+#' # Plot results
+#' # Mostly default settings
+#' plot_slopes(boot2 %>% filter(resp == "resp2"), ylabel = 'Response', sign_only = TRUE)
 #'
-#' #--- Plot slopes using the park_ord field, which is sorted high to low on DBI_rank, and color code by Network
-#' plot_slopes(boot_results_final, ylabel = "Change in Sapling Density (stems/ha) per cycle",
-#'            metric = "Sap_Dens_NatCan", order = "park_ord", group = "Network")
+#' # Order parks different than alphabetical
+#' boot2$park_ord <- factor(boot2$park, levels = c("BPRK", "APRK"))
+#' plot_slopes(boot2, ylabel = 'Response', order = 'park_ord')
 #'
-#' #--- Plot slopes using park_ord field, and color code by whether significant trend or not
-#' plot_slopes(boot_results_final, ylabel = 'test', metric = "Seed_Dens_NatCan", order = 'park_ord',
-#' group = 'sign')
+#' # Color code by network
+#' boot2$Network <- ifelse(boot2$park == "APRK", "ERMN", "MIDN")
+#' plot_slopes(boot2, ylabel = 'Response',  order = 'park_ord', group = "Network")
 #'
-#' #--- Plot only significant slopes using the park_ord field, which is sorted high to low on DBI_rank,
-#' # and color code by Network
 #'
-#' plot_slopes(boot_results_final, ylabel = "Change in Sapling Density (stems/ha) per cycle",
-#'            metric = "Sap_Dens_NatCan", order = "park_ord", group = "Network", sign_only = TRUE)
 #' }
 #' @export
 
 
-plot_slopes <- function(df, ylabel, metric, order = NA, group = NA, sign_only = FALSE, legend_position = 'none'){
+plot_slopes <- function(df, ylabel, order = NA, group = NA, sign_only = FALSE, legend_position = 'none'){
 
-  if(!is.na(group)){group_sym <- sym(group)}
-  if(!is.na(order)){order_sym <- sym(order)}
+  group_sym  <- if(!missing(group)){sym(group)} else {NULL}
+  order_sym <- if(!missing(order)){sym(order)} else {sym("park")}
 
-  df1 <- if(!is.na(order)) {
-    df %>% filter(term == "Slope" & resp == metric) %>% arrange(desc(!!order_sym))
-  } else {df}
+  df1 <- if(!is.na(order)){
+    df %>% filter(term == "Slope") %>% arrange(desc(!!order_sym))
+  } else {
+    df %>% filter(term == "Slope")}
 
   df2 <- df1 %>% mutate(sign = ifelse(lower95 > 0 | upper95 < 0, "sign", "nonsign")) %>%
                  filter(!is.na(lower95))
@@ -75,37 +74,36 @@ plot_slopes <- function(df, ylabel, metric, order = NA, group = NA, sign_only = 
 
 
   p <-
-    ggplot(df3, aes(x = if(!is.na(order)){!!order_sym} else {park},
+    ggplot(df3, aes(x = !!order_sym,
                     y = estimate, shape = sign,
-                    color = {if(!is.na(group)){!!group_sym} else {NULL}},
-                    fill = {if(!is.na(group)){!!group_sym} else {NULL}})) +
+                    color = !!group_sym,
+                    fill = !!group_sym)) +
           geom_hline(yintercept = 0, lwd = 1, color = 'DimGrey') +
           geom_errorbar(aes(ymin = lower95, ymax = upper95,
-                            color = {if(!is.na(group)){!!group_sym} else {NULL}}),
+                            color = !!group_sym),
                         width = 1.5, size = 1, show.legend = F)+
           # Have to add 2 geom_points, so significant ones can be solid and color coded by group
           # and non-sign are filled white
-          geom_point(aes(fill = {if(!is.na(group)){!!group_sym} else {NULL}}),
-                     stroke = 1, size = 2, fill = 'white', color = 'DimGrey', shape = 21)+
-          geom_point(data = df2 %>% filter(sign == "sign"),
-                     aes(x = if(!is.na(order)){!!order_sym} else {park},
+          {if(!missing(group))
+            geom_point(aes(fill = !!group_sym),
+                       stroke = 1, size = 2, fill = 'white', color = 'DimGrey', shape = 21)}+
+          {if(!missing(order))
+            geom_point(data = df2 %>% filter(sign == "sign"),
+                     aes(x = !!order_sym,
                          y = estimate,
-                         fill = {if(!is.na(group)){!!group_sym} else {NULL}}),
-                     stroke = 1, size = 2, shape = 21, color = 'DimGrey')+
-          {if(!is.na(group)){
-              if(group == "Network"){
+                         fill = !!group_sym),
+                     stroke = 1, size = 2, shape = 21, color = 'DimGrey')}+
+          {if(missing(order))
+            geom_point(stroke = 1, size = 2, fill = 'white', color = 'DimGrey', shape = 21)}+
+
+          {if(!missing(group) & group == "Network"){
                 scale_fill_manual(values = c("ERMN" = "#97BCF7", "MIDN" = "#F9AD51", "NCBN" = "#DC84F8",
                                              "NCRN" = "#E9E905", "NETN" = "#78E43C"),
-                                  name = "Network")
-              } else {scale_fill_brewer()}
-            }}+
-          {if(!is.na(group)){
-              if(group == "Network"){
+                                  name = "Network")} else {scale_fill_brewer()}}+
+          {if(!missing(group) & group == "Network"){
                 scale_color_manual(values = c("ERMN" = "#97BCF7", "MIDN" = "#F9AD51", "NCBN" = "#DC84F8",
                                               "NCRN" = "#E9E905", "NETN" = "#78E43C"),
-                                   name = "Network")
-            } else {scale_color_brewer()}
-            }}+
+                                   name = "Network")} else {scale_color_brewer()}}+
          theme_bw()+
          theme(axis.text = element_text(size = 11),
                axis.title = element_text(size = 12),

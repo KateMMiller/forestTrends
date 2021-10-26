@@ -45,6 +45,7 @@
 #'
 #' #----- Dataset with 2 parks iterating through each park with purrr -----
 #' # Create fake dataset
+#' library(tidyverse)
 #' fake_2pk <- data.frame(Plot_Name = c(rep(paste0(rep("APRK-", 12), sprintf("%02d", 1:12)), each = 3),
 #'                        rep(paste0(rep("BPRK-", 12), sprintf("%02d", 13:24)), each = 3)),
 #'                        park = c(rep("APRK", 36), rep("BPRK", 36)),
@@ -71,11 +72,11 @@
 case_boot_loess <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
                            span = NA_real_, degree = 1, num_reps, chatty = TRUE){
 
-  if(missing(df)){stop("Must specify df to run function")}
-  if(missing(x)){stop("Must specify x variable to run function")}
-  if(missing(y)){stop("Must specify y variable to run function")}
-  if(missing(ID)){stop("Must specify ID variable to run function")}
-  if(missing(num_reps)){stop("Must specify num_reps (number of replicates) for bootstrap")}
+  if(is.null(df)){stop("Must specify df to run function")}
+  if(is.null(x)){stop("Must specify x variable to run function")}
+  if(is.null(y)){stop("Must specify y variable to run function")}
+  if(is.null(ID)){stop("Must specify ID variable to run function")}
+  if(is.null(num_reps)){stop("Must specify num_reps (number of replicates) for bootstrap")}
   stopifnot(c(x, y, ID) %in% names(df))
   # stopifnot(is.numeric(df[,x]))
   # stopifnot(is.numeric(df[,y]))

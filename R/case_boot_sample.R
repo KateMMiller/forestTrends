@@ -54,10 +54,10 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", model_type = 
                              random_type = c("intercept", "slope"), span = NA_real_, degree = 1,
                              sample = TRUE, sample_num = 1){
 
-  if(missing(df)){stop("Must specify df to run function")}
-  if(missing(x)){stop("Must specify x variable to run function")}
-  if(missing(y)){stop("Must specify y variable to run function")}
-  if(missing(ID)){stop("Must specify ID variable to run function")}
+  if(is.null(df)){stop("Must specify df to run function")}
+  if(is.null(x)){stop("Must specify x variable to run function")}
+  if(is.null(y)){stop("Must specify y variable to run function")}
+  if(is.null(ID)){stop("Must specify ID variable to run function")}
   random_type <- match.arg(random_type)
   stopifnot(c(x, y, ID) %in% names(df))
   # stopifnot(is.numeric(df[,x]))

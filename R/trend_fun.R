@@ -21,7 +21,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' library(magrittr)
+#'
 #' fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
 #'                       group = "PARK",
 #'                       cycle = rep(1:3, times = 9),
@@ -34,10 +34,10 @@
 
 trend_fun <- function(df, x = "cycle", y, ID = "Plot_Name", random_type = c("intercept", "slope")){
 
-  if(missing(df)){stop("Must specify df to run function")}
-  if(missing(x)){stop("Must specify x variable to run function")}
-  if(missing(y)){stop("Must specify y variable to run function")}
-  if(missing(ID)){stop("Must specify ID variable to run function")}
+  if(is.null(df)){stop("Must specify df to run function")}
+  if(is.null(x)){stop("Must specify x variable to run function")}
+  if(is.null(y)){stop("Must specify y variable to run function")}
+  if(is.null(ID)){stop("Must specify ID variable to run function")}
   random_type <- match.arg(random_type)
   stopifnot(c(x, y, ID) %in% names(df))
   stopifnot(is.numeric(df[,x]))
