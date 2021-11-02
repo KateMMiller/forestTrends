@@ -111,7 +111,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   # Set up path for parks/metrics with too few plots or too few non-zero values
   nplots <- nrow(unique(plots))
   num_zplots <- length(unique(df$Plot_Name[df[,y] > 0]))
-  prop_zero <- sum(df[,y] > 0)/nrow(df)
+  prop_zero <- sum(df[,y] > 0, na.rm = T)/nrow(df)
 
   run_boot <- ifelse(nplots < 7 | num_zplots <= 1 | prop_zero <= 0.1, FALSE, TRUE)
 
