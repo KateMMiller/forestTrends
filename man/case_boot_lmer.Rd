@@ -44,7 +44,9 @@ values for mean response of each unique time step (i.e., cycle or year), along w
 these terms. The num_boots column is the number of bootstrapped samples that successfully fit an lmer model. If any singular
 fits are returned, a warning message is printed in the console to indicate number of bootstraps that returned singular fits,
 but the model results are stored and included in the confidence interval estimates. Note that this approach assumes that
-y ~ x is a linear relationships. If that assumption is violated, results may be incorrect.
+y ~ x is a linear relationships. If that assumption is violated, results may be incorrect. If there are fewer than 7 plots,
+less than 10% of the data are non-zero, or only 1 plot is non-zero, function will fit a model to the data but will not run
+the bootstrap and calculate confidence intervals.
 }
 \examples{
 \dontrun{
@@ -56,15 +58,16 @@ fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
 
 boot1 <- case_boot_lmer(fake_df, y = "resp", num_reps = 10, random_type = 'intercept', chatty = TRUE)
 
-#----- Dataset with 2 parks iterating through each park with purrr -----
-# Create fake dataset
+#----- Dataset with 2 parks iterating through each park with purrr. Second park has more plots -----
+library(tidyverse)
 fake_2pk <- data.frame(Plot_Name = c(rep(paste0(rep("APRK-", 12), sprintf("\%02d", 1:12)), each = 3),
-                       rep(paste0(rep("BPRK-", 12), sprintf("\%02d", 13:24)), each = 3)),
-                       park = c(rep("APRK", 36), rep("BPRK", 36)),
-                       cycle = rep(1:3, times = 24),
-                       resp = runif(72, 0, 30))
+rep(paste0(rep("BPRK-", 40), sprintf("\%02d", 13:53)), each = 3)),
+park = c(rep("APRK", 36), rep("BPRK", 123)),
+cycle = rep(1:3, times = 53),
+resp = runif(159, 0, 30))
 
 # Nest dataset by park
+
 nested_df <- fake_2pk \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
 
 # Run case_boot_lmer on nested dataset
@@ -76,7 +79,28 @@ boot2 <- nested_df \%>\% mutate(
 # Compile results
 boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
 
+#----- Dataset with 3 parks that will not go through bootstrap.
+  #----- Park 1 has too few plots Park 2 only has 1 plot with non-zero; Park 3 has <10\% of plots with non-zero  -----
 
+Plot_Name <- c(rep(paste0(rep("AAAA-", 6), sprintf("\%02d", 1:6)), each = 3),
+rep(paste0(rep("BBBB-", 12), sprintf("\%02d", 1:12)), each = 3),
+rep(paste0(rep("CCCC-", 24), sprintf("\%02d", 1:24)), each = 3))
+park <- substr(Plot_Name, 1, 4)
+cycle <- rep(1:3, times = length(Plot_Name)/3)
+resp <- c(runif(18, 0, 10),
+        rep(0, times = 34), runif(2, 0, 10),
+          rep(0, times = 72))
+resp[sample(53:125, 7)] <- runif(7, 1, 10) # make <10\% of CCCC non-zero
+
+no_boots <- data.frame(Plot_Name, park, cycle, resp)
+nested_df <- no_boots \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
+# Run case_boot_lmer on nested dataset
+boot2 <- nested_df \%>\% mutate(
+  model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
+                                    random_type = 'intercept', group = "grp",
+                                    num_reps = 100, chatty = TRUE)))
+# Compile results
+boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
 }
 
 }

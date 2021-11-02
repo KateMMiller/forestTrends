@@ -8,7 +8,9 @@
 #' these terms. The num_boots column is the number of bootstrapped samples that successfully fit an lmer model. If any singular
 #' fits are returned, a warning message is printed in the console to indicate number of bootstraps that returned singular fits,
 #' but the model results are stored and included in the confidence interval estimates. Note that this approach assumes that
-#' y ~ x is a linear relationships. If that assumption is violated, results may be incorrect.
+#' y ~ x is a linear relationships. If that assumption is violated, results may be incorrect. If there are fewer than 7 plots,
+#' less than 10% of the data are non-zero, or only 1 plot is non-zero, function will fit a model to the data but will not run
+#' the bootstrap and calculate confidence intervals.
 #'
 #' @param df Data frame containing a column called Plot_Name, a column containing a time variable, and a column with at least one
 #' response variable.
@@ -60,7 +62,28 @@
 #' # Compile results
 #' boot_results <- boot2 %>% select(park, model) %>% unnest(model) %>% select(-num_boots)
 #'
+#' #----- Dataset with 3 parks that will not go through bootstrap.
+#'   #----- Park 1 has too few plots Park 2 only has 1 plot with non-zero; Park 3 has <10% of plots with non-zero  -----
 #'
+#' Plot_Name <- c(rep(paste0(rep("AAAA-", 6), sprintf("%02d", 1:6)), each = 3),
+#' rep(paste0(rep("BBBB-", 12), sprintf("%02d", 1:12)), each = 3),
+#' rep(paste0(rep("CCCC-", 24), sprintf("%02d", 1:24)), each = 3))
+#' park <- substr(Plot_Name, 1, 4)
+#' cycle <- rep(1:3, times = length(Plot_Name)/3)
+#' resp <- c(runif(18, 0, 10),
+#'         rep(0, times = 34), runif(2, 0, 10),
+#'           rep(0, times = 72))
+#' resp[sample(53:125, 7)] <- runif(7, 1, 10) # make <10% of CCCC non-zero
+#'
+#' no_boots <- data.frame(Plot_Name, park, cycle, resp)
+#' nested_df <- no_boots %>% mutate(grp = park) %>% group_by(park) %>% nest()
+#' # Run case_boot_lmer on nested dataset
+#' boot2 <- nested_df %>% mutate(
+#'   model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
+#'                                     random_type = 'intercept', group = "grp",
+#'                                     num_reps = 100, chatty = TRUE)))
+#' # Compile results
+#' boot_results <- boot2 %>% select(park, model) %>% unnest(model) %>% select(-num_boots)
 #' }
 #'
 #' @export
@@ -85,7 +108,12 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
 
   plots <- data.frame(unique(df[,1]))
 
+  # Set up path for parks/metrics with too few plots or too few non-zero values
   nplots <- nrow(unique(plots))
+  num_zplots <- length(unique(df$Plot_Name[df[,y] > 0]))
+  prop_zero <- sum(df[,y] > 0)/nrow(df)
+
+  run_boot <- ifelse(nplots < 7 | num_zplots <= 1 | prop_zero <= 0.1, FALSE, TRUE)
 
   if(chatty == TRUE){cat(grp)}
 
@@ -94,7 +122,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
                                                 model_type = 'lmer') %>%
                                  dplyr::select(-boot_num, -isSingular))
 
- if(nplots > 6){
+ if(run_boot == TRUE){
    boot_mod <-
     suppressWarnings(purrr::map_df(seq_len(num_reps),
                                    ~case_boot_sample(df, x = x, y = y, ID = ID,
@@ -126,11 +154,13 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
     boot_CIs <- boot_CIs %>% dplyr::select(-num_boots_sing)
 
     colnames(boot_CIs) <- c("lower95", "upper95", "num_boots", "term")
-    boot_CIs
- } else if(nplots <=6){
-   warning("Fewer than 6 plots for case bootstrap. Returning data.frame with estimates but no CIs.")
+
+ } else if(run_boot == FALSE){
+     ifelse(nplots < 7, warning("Fewer than 7 plots for case bootstrap. Returning data.frame with estimates but no CIs."),
+                        warning("Too few non-zero values in the response. Returning data.frame with estimates but no CIs."))
+
    boot_CIs <- data.frame(term = real_mod$term, lower95 = NA, upper95 = NA, num_boots = NA)
-   boot_CIs
+
    }
 
   results <- dplyr::left_join(real_mod, boot_CIs, by = "term")
