@@ -34,7 +34,7 @@ data. This is mostly an internal function run within case_boot_lmer(), but can b
 }
 \examples{
 \dontrun{
-library(magrittr)
+
 fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
                       group = "PARK",
                       cycle = rep(1:3, times = 9),

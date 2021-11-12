@@ -10,7 +10,8 @@ case_boot_sample(
   y,
   ID = "Plot_Name",
   model_type = c("lmer", "loess"),
-  random_type = c("intercept", "slope"),
+  random_type = c("intercept", "slope", "custom"),
+  random_formula = NA,
   span = NA_real_,
   degree = 1,
   sample = TRUE,
@@ -30,9 +31,11 @@ are a park code.}
 
 \item{model_type}{Options are "lmer" (Default) or "loess".}
 
-\item{random_type}{Options are intercept or slope. Required if model type is "lmer". The intercept option (default) will
-fit a random intercept on plot with (1|Plot_Name) as random component. The slope option will fit a random slope model
-with (1 + cycle|Plot_Name).}
+\item{random_type}{For model_type = "lmer, specify "intercept", "slope", or "custom". The intercept option (default) will fit a random
+intercept on plot with, e.g., (1|Plot_Name), as random factor. The slope option will fit a random slope model with, e.g.,
+(1 + cycle|Plot_Name), as random factor}
+
+\item{random_formula}{If random_type = "custom", must specify the random effects formula for the model in quotes. Otherwise leave blank.}
 
 \item{span}{numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
 and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
@@ -46,14 +49,14 @@ fANCOVA::loess.as() will be used to determine the optimum span (Note: user speci
 generally recommended, depending on how wavy the line should to be.}
 
 \item{sample}{TRUE or FALSE. TRUE (default) will generate a bootstrapped sample of the specified data frame. FALSE will
-run trend_fun() on the original dataset.}
+run trend_lmer() on the original dataset.}
 
 \item{sample_num}{Used for iteration to indicate the replicate number of the bootstrap. Do not need to specify if not
 running within case_boot_lmer().}
 }
 \description{
 Bootstrap resampling function that creates a bootstrapped sample of plots with replacement and
-returns model output from trend_fun() for that sample. This is mostly an internal function run within case_boot_lmer(),
+returns model output from trend_lmer() for that sample. This is mostly an internal function run within case_boot_lmer(),
 but can be used as a stand alone function.
 }
 \examples{
@@ -64,7 +67,7 @@ fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
                       resp = runif(27, 0, 20))
 
 boot_ex <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
-  model_tyle = 'lmer', random_type = "intercept", sample = TRUE)
+  model_type = 'lmer', random_type = "intercept", sample = TRUE)
 
 boot_l <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
   model_type = 'loess', span = 1, sample = TRUE)

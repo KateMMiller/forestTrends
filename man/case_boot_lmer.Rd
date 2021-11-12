@@ -10,14 +10,15 @@ case_boot_lmer(
   y,
   ID = "Plot_Name",
   group = NA,
-  random_type = c("intercept", "slope"),
+  random_type = c("intercept", "slope", "custom"),
+  random_formula = NA,
   num_reps,
   chatty = TRUE
 )
 }
 \arguments{
-\item{df}{Data frame containing a column called Plot_Name, a column containing a time variable, and a column with at least one
-response variable.}
+\item{df}{Data frame containing and ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
+variable, and a column with at least one response variable.}
 
 \item{x}{Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.}
 
@@ -29,8 +30,10 @@ are a park code.}
 \item{group}{Quote column containing a grouping variable, like "Unit_ID" for printing progress to console. If not specified,
 will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.}
 
-\item{random_type}{intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
+\item{random_type}{Specify intercept, slope, or custom. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
 random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)}
+
+\item{random_formula}{If random_type = "custom", must specify the random effects formula for the model in quotes. Otherwise leave blank.}
 
 \item{num_reps}{Number of replicates to run in the bootstrap}
 
@@ -101,6 +104,35 @@ boot2 <- nested_df \%>\% mutate(
                                     num_reps = 100, chatty = TRUE)))
 # Compile results
 boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
+
+#----- Example with custom random effects
+park = rep(c("APRK", "BPRK", "CPRK"), each = 120)
+plot_name = paste(park, sprintf("\%02d", rep(c(1:40), each = 3)), sep = "-")
+cycle = rep(1:3, times = 40)
+resp = c(runif(60, 0, 10), runif(60, 0, 50), runif(60, 0, 10))
+
+test_df <- data.frame(park, plot_name, cycle, resp)
+# give CPRK a significant slope
+test_df$resp2 <- ifelse(test_df$park == "CPRK",
+                        test_df$resp + test_df$cycle * 0.5 + rnorm(60, 0, 1),
+                        test_df$resp)
+
+# nested random intercept
+test1 <- case_boot_lmer(test_df,
+                        x = 'cycle', y = 'resp2',
+                        ID = 'plot_name',
+                        random_type = 'custom',
+                        random_formula = "(1|park/plot_name)",
+                        num_reps = 100, chatty = T)
+
+# nested random slope
+test2 <- case_boot_lmer(test_df,
+                        x = 'cycle', y = 'resp2',
+                        ID = 'plot_name',
+                        random_type = 'custom',
+                        random_formula = "(cycle|park/plot_name)",
+                        num_reps = 100, chatty = T)
+
 }
 
 }
