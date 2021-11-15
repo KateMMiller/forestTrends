@@ -9,9 +9,11 @@ case_boot_sample(
   x = "cycle",
   y,
   ID = "Plot_Name",
+  group = NA,
   model_type = c("lmer", "loess"),
   random_type = c("intercept", "slope", "custom"),
   random_formula = NA,
+  nest_var = NA,
   span = NA_real_,
   degree = 1,
   sample = TRUE,
@@ -29,6 +31,9 @@ response variable.}
 \item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 are a park code.}
 
+\item{group}{Including a group variable, like "Unit_ID", will also print that group to show progress in the console.
+If not specified, will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.}
+
 \item{model_type}{Options are "lmer" (Default) or "loess".}
 
 \item{random_type}{For model_type = "lmer, specify "intercept", "slope", or "custom". The intercept option (default) will fit a random
@@ -36,6 +41,8 @@ intercept on plot with, e.g., (1|Plot_Name), as random factor. The slope option 
 (1 + cycle|Plot_Name), as random factor}
 
 \item{random_formula}{If random_type = "custom", must specify the random effects formula for the model in quotes. Otherwise leave blank.}
+
+\item{nest_var}{Quote column containing a grouping variable for nested random effects.}
 
 \item{span}{numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
 and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.

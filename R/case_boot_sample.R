@@ -12,12 +12,14 @@
 #' @param y Quoted response variable in the data frame.
 #' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 #' are a park code.
+#' @param group Including a group variable, like "Unit_ID", will also print that group to show progress in the console.
+#' If not specified, will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.
 #' @param model_type Options are "lmer" (Default) or "loess".
 #' @param random_type For model_type = "lmer, specify "intercept", "slope", or "custom". The intercept option (default) will fit a random
 #' intercept on plot with, e.g., (1|Plot_Name), as random factor. The slope option will fit a random slope model with, e.g.,
 #' (1 + cycle|Plot_Name), as random factor
 #' @param random_formula If random_type = "custom", must specify the random effects formula for the model in quotes. Otherwise leave blank.
-#'
+#' @param nest_var Quote column containing a grouping variable for nested random effects.
 #' @param span numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
 #' and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
 #' You can calculate the number of time steps to include in the smoothing window by dividing p/n, where p is number of plots
@@ -52,8 +54,10 @@
 #'
 #' @export
 
-case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", model_type = c("lmer", "loess"),
+case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
+                             model_type = c("lmer", "loess"),
                              random_type = c("intercept", "slope", "custom"), random_formula = NA,
+                             nest_var = NA,
                              span = NA_real_, degree = 1, sample = TRUE, sample_num = 1){
 
   if(is.null(df)){stop("Must specify df to run function")}
@@ -79,14 +83,21 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", model_type = 
   # set up unique naming column, so plots selected more than once have a unique ID.
   samp$case <- as.factor(stringr::str_pad(rownames(samp), nchar(n), side ="left", pad = 0))
 
-  df_samp <- dplyr::left_join(samp, df[,c(ID, x, y)], by = c("ID" = ID)) %>%
+  cols <- if(!is.na(nest_var)){c(ID, x, y, nest_var)} else {c(ID, x, y)}
+
+  df_samp <- dplyr::left_join(samp, df[,cols], by = c("ID" = ID)) %>%
     dplyr::arrange(case, x)
+
+  # For custom formulas, have to replace smallest unit (e.g. Plot_Name) in formula
+  # with case in the random_formula argument
+
+  rand_form <- ifelse(random_type == "custom", gsub(ID, "case", random_formula), NA)
 
   mod <-
     if(model_type == "lmer"){
       suppressMessages(
-        trend_lmer(df_samp, x = x, y = y, ID = "case",
-                   random_type = random_type, random_formula = random_formula)) %>%
+        trend_lmer(df_samp, x = x, y = y, ID = "case", nest_var = nest_var,
+                   random_type = random_type, random_formula = rand_form)) %>%
         dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
     } else if(model_type == "loess"){
       suppressMessages(

@@ -10,7 +10,8 @@ trend_lmer(
   y,
   ID = "Plot_Name",
   random_type = c("intercept", "slope", "custom"),
-  random_formula = NA
+  random_formula = NA,
+  nest_var = NA
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ are a park code.}
 random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)}
 
 \item{random_formula}{If random_type = "custom", must specify the random effects formula for the model in quotes. Otherwise leave blank.}
+
+\item{nest_var}{Quote column containing a grouping variable for nested random effects.}
 }
 \description{
 fit random effects model in lmer, and return intercept, slope and predicted responses for each

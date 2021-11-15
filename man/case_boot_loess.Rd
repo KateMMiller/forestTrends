@@ -64,6 +64,7 @@ boot1 <- case_boot_loess(fake_df, y = "resp", num_reps = 10, span = 0.9, chatty 
 
 #----- Dataset with 2 parks iterating through each park with purrr -----
 # Create fake dataset
+library(tidyverse)
 fake_2pk <- data.frame(Plot_Name = c(rep(paste0(rep("APRK-", 12), sprintf("\%02d", 1:12)), each = 3),
                        rep(paste0(rep("BPRK-", 12), sprintf("\%02d", 13:24)), each = 3)),
                        park = c(rep("APRK", 36), rep("BPRK", 36)),

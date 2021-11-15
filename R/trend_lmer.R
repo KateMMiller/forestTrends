@@ -13,6 +13,7 @@
 #' @param random_type Specify intercept, slope, or custom. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
 #' random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)
 #' @param random_formula If random_type = "custom", must specify the random effects formula for the model in quotes. Otherwise leave blank.
+#' @param nest_var Quote column containing a grouping variable for nested random effects.
 #'
 #' @importFrom magrittr %>%
 #' @importFrom lme4 lmer
@@ -42,8 +43,9 @@
 #'
 #' @export
 
-trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", random_type = c("intercept", "slope", "custom"),
-                       random_formula = NA){
+trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name",
+                       random_type = c("intercept", "slope", "custom"), random_formula = NA,
+                       nest_var = NA){
 
   if(is.null(df)){stop("Must specify df to run function")}
   if(is.null(x)){stop("Must specify x variable to run function")}
