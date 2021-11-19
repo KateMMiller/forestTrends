@@ -2,7 +2,7 @@
 % Please edit documentation in R/case_boot_lmer.R
 \name{case_boot_lmer}
 \alias{case_boot_lmer}
-\title{case_boot_lmer: run case bootstrap for random intercept model and return model output}
+\title{case_boot_lmer: run case bootstrap for lmer model with random effects and return model output}
 \usage{
 case_boot_lmer(
   df,
@@ -10,36 +10,43 @@ case_boot_lmer(
   y,
   ID = "Plot_Name",
   group = NA,
-  random_type = c("intercept", "slope"),
+  random_type = c("intercept", "slope", "custom"),
+  random_formula = NA,
+  nest_var = NA,
   num_reps,
   chatty = TRUE
 )
 }
 \arguments{
-\item{df}{Data frame containing a column called Plot_Name, a column containing a time variable, and a column with at least one
-response variable.}
+\item{df}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
+variable, and at least one column with a response variable.}
 
 \item{x}{Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.}
 
-\item{y}{Quoted response variable in the data frame.}
+\item{y}{Quoted response variable in the data frame. Must be numeric.}
 
 \item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 are a park code.}
 
-\item{group}{Quote column containing a grouping variable, like "Unit_ID" for printing progress to console. If not specified,
-will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.}
+\item{group}{Including a group variable, like "Unit_ID", will print that group to show progress in the console.
+If not specified, will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.}
 
-\item{random_type}{intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
-random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)}
+\item{random_type}{Specify "intercept", "slope", or "custom". The intercept option (default) will fit a random intercept model
+with (1|ID) as random component. The slope option will fit a random slope model with (1 + x|ID) as the random component.
+If "custom" is used, must also specify random_formula.}
 
-\item{num_reps}{Number of replicates to run in the bootstrap}
+\item{random_formula}{If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.}
+
+\item{nest_var}{Quoted column name containing the higher level grouping variable for a nested random effect.}
+
+\item{num_reps}{Number of replicates to run in the bootstrap.}
 
 \item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
 in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.}
 }
 \description{
 For each replicate, as specified by num_reps, function will generate a bootstrapped sample of data from the
-original dataset, fit a random intercept model for plot, and return the estimates for intercept, slope, and predicted
+original dataset, fit a model with user-specified random effects, and return the estimates for intercept, slope, and predicted
 values for mean response of each unique time step (i.e., cycle or year), along with 95 % confidence intervals for each of
 these terms. The num_boots column is the number of bootstrapped samples that successfully fit an lmer model. If any singular
 fits are returned, a warning message is printed in the console to indicate number of bootstraps that returned singular fits,
@@ -101,6 +108,37 @@ boot2 <- nested_df \%>\% mutate(
                                     num_reps = 100, chatty = TRUE)))
 # Compile results
 boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
+
+#----- Examples with custom random effects
+park = rep(c("APRK", "BPRK", "CPRK"), each = 120)
+plot_name = paste(park, sprintf("\%02d", rep(c(1:40), each = 3)), sep = "-")
+cycle = rep(1:3, times = 40)
+b0 = 10
+b1 = 5
+grp = ifelse(park == "CPRK", 1, 0.5)
+y = b0 + b1*cycle*grp # grp C has stronger resp.
+
+resp = rnorm(120, mean = y, sd = 2)
+
+test_df <- data.frame(park, plot_name, cycle, resp)
+
+# nested random intercept
+test1 <- case_boot_lmer(test_df,
+                        x = 'cycle', y = 'resp',
+                        ID = 'plot_name', group = 'park',
+                        random_type = 'custom',
+                        random_formula = "(1|park/plot_name)",
+                        nest_var = "park",
+                        num_reps = 100, chatty = T)
+
+# nested random slope
+test2 <- case_boot_lmer(test_df,
+                        x = 'cycle', y = 'resp',
+                        ID = 'plot_name', group = 'park',
+                        random_type = 'custom',
+                        random_formula = "(cycle|park/plot_name)",
+                        nest_var = "park",
+                        num_reps = 100, chatty = T)
 }
 
 }

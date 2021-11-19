@@ -18,8 +18,8 @@ plot_trend_response(
 )
 }
 \arguments{
-\item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
-response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.}
+\item{df}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
+variable, and at least one column with a response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.}
 
 \item{xlab}{Quoted title for x axis.}
 

@@ -9,8 +9,11 @@ case_boot_sample(
   x = "cycle",
   y,
   ID = "Plot_Name",
+  group = NA,
   model_type = c("lmer", "loess"),
-  random_type = c("intercept", "slope"),
+  random_type = c("intercept", "slope", "custom"),
+  random_formula = NA,
+  nest_var = NA,
   span = NA_real_,
   degree = 1,
   sample = TRUE,
@@ -18,21 +21,28 @@ case_boot_sample(
 )
 }
 \arguments{
-\item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
-response variable.}
+\item{df}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
+variable, and at least one column with a response variable.}
 
 \item{x}{Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.}
 
-\item{y}{Quoted response variable in the data frame.}
+\item{y}{Quoted response variable in the data frame. Must be numeric.}
 
 \item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 are a park code.}
 
+\item{group}{Including a group variable, like "Unit_ID", will print that group to show progress in the console.
+If not specified, will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.}
+
 \item{model_type}{Options are "lmer" (Default) or "loess".}
 
-\item{random_type}{Options are intercept or slope. Required if model type is "lmer". The intercept option (default) will
-fit a random intercept on plot with (1|Plot_Name) as random component. The slope option will fit a random slope model
-with (1 + cycle|Plot_Name).}
+\item{random_type}{For model_type = "lmer", specify "intercept", "slope", or "custom". The intercept option (default) will fit a random intercept model
+with (1|ID) as random component. The slope option will fit a random slope model with (1 + x|ID) as the random component.
+If "custom" is used, must also specify random_formula.}
+
+\item{random_formula}{If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.}
+
+\item{nest_var}{Quoted column name containing the higher level grouping variable for a nested random effect.}
 
 \item{span}{numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
 and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
@@ -46,15 +56,15 @@ fANCOVA::loess.as() will be used to determine the optimum span (Note: user speci
 generally recommended, depending on how wavy the line should to be.}
 
 \item{sample}{TRUE or FALSE. TRUE (default) will generate a bootstrapped sample of the specified data frame. FALSE will
-run trend_fun() on the original dataset.}
+run trend_lmer() on the original dataset.}
 
 \item{sample_num}{Used for iteration to indicate the replicate number of the bootstrap. Do not need to specify if not
 running within case_boot_lmer().}
 }
 \description{
 Bootstrap resampling function that creates a bootstrapped sample of plots with replacement and
-returns model output from trend_fun() for that sample. This is mostly an internal function run within case_boot_lmer(),
-but can be used as a stand alone function.
+returns model output from trend_lmer() or trend_loess() for that sample. This is mostly an internal function run within
+case_boot_lmer() or case_boot_loess(), but can be used as a stand alone function.
 }
 \examples{
 \dontrun{
@@ -64,7 +74,7 @@ fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
                       resp = runif(27, 0, 20))
 
 boot_ex <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
-  model_tyle = 'lmer', random_type = "intercept", sample = TRUE)
+  model_type = 'lmer', random_type = "intercept", sample = TRUE)
 
 boot_l <- case_boot_sample(fake_df, x = "cycle", y = "resp", ID = "Plot_Name",
   model_type = 'loess', span = 1, sample = TRUE)

@@ -1,9 +1,9 @@
 #' @include case_boot_sample.R
 #'
-#' @title case_boot_lmer: run case bootstrap for random intercept model and return model output
+#' @title case_boot_lmer: run case bootstrap for lmer model with random effects and return model output
 #'
 #' @description For each replicate, as specified by num_reps, function will generate a bootstrapped sample of data from the
-#' original dataset, fit a random intercept model for plot, and return the estimates for intercept, slope, and predicted
+#' original dataset, fit a model with user-specified random effects, and return the estimates for intercept, slope, and predicted
 #' values for mean response of each unique time step (i.e., cycle or year), along with 95 % confidence intervals for each of
 #' these terms. The num_boots column is the number of bootstrapped samples that successfully fit an lmer model. If any singular
 #' fits are returned, a warning message is printed in the console to indicate number of bootstraps that returned singular fits,
@@ -12,17 +12,20 @@
 #' less than 10% of the data are non-zero, or only 1 plot is non-zero, function will fit a model to the data but will not run
 #' the bootstrap and calculate confidence intervals.
 #'
-#' @param df Data frame containing a column called Plot_Name, a column containing a time variable, and a column with at least one
-#' response variable.
+#' @param df Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
+#' variable, and at least one column with a response variable.
 #' @param x Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.
-#' @param y Quoted response variable in the data frame.
+#' @param y Quoted response variable in the data frame. Must be numeric.
 #' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 #' are a park code.
-#' @param group Quote column containing a grouping variable, like "Unit_ID" for printing progress to console. If not specified,
-#' will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.
-#' @param random_type intercept or slope. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
-#' random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)
-#' @param num_reps Number of replicates to run in the bootstrap
+#' @param group Including a group variable, like "Unit_ID", will print that group to show progress in the console.
+#' If not specified, will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.
+#' @param random_type Specify "intercept", "slope", or "custom". The intercept option (default) will fit a random intercept model
+#' with (1|ID) as random component. The slope option will fit a random slope model with (1 + x|ID) as the random component.
+#' If "custom" is used, must also specify random_formula.
+#' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
+#' @param nest_var Quoted column name containing the higher level grouping variable for a nested random effect.
+#' @param num_reps Number of replicates to run in the bootstrap.
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
 #' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.
 #'
@@ -84,12 +87,45 @@
 #'                                     num_reps = 100, chatty = TRUE)))
 #' # Compile results
 #' boot_results <- boot2 %>% select(park, model) %>% unnest(model) %>% select(-num_boots)
+#'
+#' #----- Examples with custom random effects
+#' park = rep(c("APRK", "BPRK", "CPRK"), each = 120)
+#' plot_name = paste(park, sprintf("%02d", rep(c(1:40), each = 3)), sep = "-")
+#' cycle = rep(1:3, times = 40)
+#' b0 = 10
+#' b1 = 5
+#' grp = ifelse(park == "CPRK", 1, 0.5)
+#' y = b0 + b1*cycle*grp # grp C has stronger resp.
+#'
+#' resp = rnorm(120, mean = y, sd = 2)
+#'
+#' test_df <- data.frame(park, plot_name, cycle, resp)
+#'
+#' # nested random intercept
+#' test1 <- case_boot_lmer(test_df,
+#'                         x = 'cycle', y = 'resp',
+#'                         ID = 'plot_name', group = 'park',
+#'                         random_type = 'custom',
+#'                         random_formula = "(1|park/plot_name)",
+#'                         nest_var = "park",
+#'                         num_reps = 100, chatty = T)
+#'
+#' # nested random slope
+#' test2 <- case_boot_lmer(test_df,
+#'                         x = 'cycle', y = 'resp',
+#'                         ID = 'plot_name', group = 'park',
+#'                         random_type = 'custom',
+#'                         random_formula = "(cycle|park/plot_name)",
+#'                         nest_var = "park",
+#'                         num_reps = 100, chatty = T)
 #' }
 #'
 #' @export
 
 case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
-                           random_type = c('intercept', 'slope'), num_reps, chatty = TRUE){
+                           random_type = c('intercept', 'slope', 'custom'),
+                           random_formula = NA, nest_var = NA,
+                           num_reps, chatty = TRUE){
 
   if(is.null(df)){stop("Must specify df to run function")}
   if(is.null(x)){stop("Must specify x variable to run function")}
@@ -97,39 +133,42 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   if(is.null(ID)){stop("Must specify ID variable to run function")}
   if(is.null(num_reps)){stop("Must specify num_reps (number of replicates) for bootstrap")}
   random_type <- match.arg(random_type)
+  if(random_type == "custom" & is.na(random_formula)){stop("Must specify random formula of random_type = 'custom'")}
   stopifnot(c(x, y, ID) %in% names(df))
-  # stopifnot(is.numeric(df[,x]))
-  # stopifnot(is.numeric(df[,y]))
 
   pname1 <- substr(df[1, ID], 1, 4)
 
   grp <- ifelse(!is.na(group), paste(unique(df[,group])),
                                  paste(pname1))
 
-  plots <- data.frame(unique(df[,1]))
+  plots <- data.frame(unique(df[,ID]))
 
   # Set up path for parks/metrics with too few plots or too few non-zero values
   nplots <- nrow(unique(plots))
-  num_zplots <- length(unique(df$Plot_Name[df[,y] > 0]))
+  num_zplots <- length(unique(df[,ID][df[,y] > 0]))
   prop_zero <- sum(df[,y] > 0, na.rm = T)/nrow(df)
 
   run_boot <- ifelse(nplots < 7 | num_zplots <= 1 | prop_zero <= 0.1, FALSE, TRUE)
 
   if(chatty == TRUE){cat(grp)}
 
-  real_mod <- suppressWarnings(case_boot_sample(df, x = x, y = y, ID = ID,
-                                                sample = F, sample_num = 1, random_type = random_type,
+  real_mod <- suppressWarnings(case_boot_sample(df, x = x, y = y, ID = ID, sample = F, sample_num = 1,
+                                                group = group,
+                                                random_type = random_type, random_formula = random_formula,
+                                                nest_var = nest_var,
                                                 model_type = 'lmer') %>%
-                                 dplyr::select(-boot_num, -isSingular))
+                               dplyr::select(-boot_num, -isSingular))
 
- if(run_boot == TRUE){
-   boot_mod <-
-    suppressWarnings(purrr::map_df(seq_len(num_reps),
-                                   ~case_boot_sample(df, x = x, y = y, ID = ID,
-                                                     sample = T, sample_num = .x,
-                                                     random_type = random_type,
-                                                     model_type = 'lmer')) %>%
-    tidyr::pivot_wider(names_from = term, values_from = estimate)) %>% data.frame()
+  if(run_boot == TRUE){
+
+    boot_mod <-
+      suppressWarnings(purrr::map_df(seq_len(num_reps),
+                                     ~case_boot_sample(df, x = x, y = y, ID = ID, sample = T, sample_num = .x,
+                                                       group = group,
+                                                       random_type = random_type, random_formula = random_formula,
+                                                       nest_var = nest_var,
+                                                       model_type = 'lmer')) %>%
+      tidyr::pivot_wider(names_from = term, values_from = estimate)) %>% data.frame()
 
 
     boot_CIs <- data.frame(t(apply(boot_mod %>% dplyr::select(-boot_num, -isSingular), 2,
