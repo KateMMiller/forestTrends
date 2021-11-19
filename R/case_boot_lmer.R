@@ -1,9 +1,9 @@
 #' @include case_boot_sample.R
 #'
-#' @title case_boot_lmer: run case bootstrap for random intercept model and return model output
+#' @title case_boot_lmer: run case bootstrap for lmer model with random effects and return model output
 #'
 #' @description For each replicate, as specified by num_reps, function will generate a bootstrapped sample of data from the
-#' original dataset, fit a random intercept model for plot, and return the estimates for intercept, slope, and predicted
+#' original dataset, fit a model with user-specified random effects, and return the estimates for intercept, slope, and predicted
 #' values for mean response of each unique time step (i.e., cycle or year), along with 95 % confidence intervals for each of
 #' these terms. The num_boots column is the number of bootstrapped samples that successfully fit an lmer model. If any singular
 #' fits are returned, a warning message is printed in the console to indicate number of bootstraps that returned singular fits,
@@ -12,19 +12,20 @@
 #' less than 10% of the data are non-zero, or only 1 plot is non-zero, function will fit a model to the data but will not run
 #' the bootstrap and calculate confidence intervals.
 #'
-#' @param df Data frame containing and ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
-#' variable, and a column with at least one response variable.
+#' @param df Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
+#' variable, and at least one column with a response variable.
 #' @param x Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.
-#' @param y Quoted response variable in the data frame.
+#' @param y Quoted response variable in the data frame. Must be numeric.
 #' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 #' are a park code.
-#' @param group Including a group variable, like "Unit_ID", will also print that group to show progress in the console.
+#' @param group Including a group variable, like "Unit_ID", will print that group to show progress in the console.
 #' If not specified, will print the first 4 characters of the ID to the console, assuming the ID starts with a 4-letter park code.
-#' @param random_type Specify intercept, slope, or custom. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
-#' random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)
-#' @param random_formula If random_type = "custom", must specify the random effects formula for the model in quotes. Otherwise leave blank.
-#' @param nest_var Quote column containing a grouping variable for nested random effects.
-#' @param num_reps Number of replicates to run in the bootstrap
+#' @param random_type Specify "intercept", "slope", or "custom". The intercept option (default) will fit a random intercept model
+#' with (1|ID) as random component. The slope option will fit a random slope model with (1 + x|ID) as the random component.
+#' If "custom" is used, must also specify random_formula.
+#' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
+#' @param nest_var Quoted column name containing the higher level grouping variable for a nested random effect.
+#' @param num_reps Number of replicates to run in the bootstrap.
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
 #' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.
 #'
@@ -134,8 +135,6 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   random_type <- match.arg(random_type)
   if(random_type == "custom" & is.na(random_formula)){stop("Must specify random formula of random_type = 'custom'")}
   stopifnot(c(x, y, ID) %in% names(df))
-  stopifnot(is.numeric(df[,x]) | is.integer(df[,x]))
-  stopifnot(is.numeric(df[,y]) | is.integer(df[,y]))
 
   pname1 <- substr(df[1, ID], 1, 4)
 

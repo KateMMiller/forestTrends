@@ -10,8 +10,8 @@
 #' (<7 plots), the coefficients from the model on the raw data were plotted as dashed, light-grey lines without
 #' confidence intervals.
 #'
-#' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
-#' response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.
+#' @param df Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
+#' variable, and at least one column with a response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.
 #' @param xlab Quoted title for x axis.
 #' @param ylab Quoted title for y axis.
 #' @param group Quoted column for facet wraps. If not specified, only 1 plot will be returned
