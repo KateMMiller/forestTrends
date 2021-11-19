@@ -2,7 +2,7 @@
 % Please edit documentation in R/trend_lmer.R
 \name{trend_lmer}
 \alias{trend_lmer}
-\title{trend_lmer: fit random effects model with lmer and return results of interest}
+\title{trend_lmer: Fit random effects model with lmer and return results of interest}
 \usage{
 trend_lmer(
   df,
@@ -10,30 +10,28 @@ trend_lmer(
   y,
   ID = "Plot_Name",
   random_type = c("intercept", "slope", "custom"),
-  random_formula = NA,
-  nest_var = NA
+  random_formula = NA
 )
 }
 \arguments{
-\item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
-response variable.}
+\item{df}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
+variable, and at least one column with a response variable.}
 
 \item{x}{Quoted time variable for trend analysis. Default is "cycle", but can also model by year. Must be numeric.}
 
-\item{y}{Quoted response variable in the data frame.}
+\item{y}{Quoted response variable in the data frame. Must be numeric}
 
 \item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
 are a park code.}
 
-\item{random_type}{Specify intercept, slope, or custom. The intercept option (default) will fit a random intercept on plot with (1|Plot_Name) as
-random component. The slope option will fit a random slope model with (1 + cycle|Plot_Name)}
+\item{random_type}{Specify "intercept", "slope", or "custom". The intercept option (default) will fit a random intercept model
+with (1|ID) as random component. The slope option will fit a random slope model with (1 + x|ID) as the random component.
+If "custom" is used, must also specify random_formula.}
 
-\item{random_formula}{If random_type = "custom", must specify the random effects formula for the model in quotes. Otherwise leave blank.}
-
-\item{nest_var}{Quote column containing a grouping variable for nested random effects.}
+\item{random_formula}{If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.}
 }
 \description{
-fit random effects model in lmer, and return intercept, slope and predicted responses for each
+Fit random effects model in lmer, and return fixed effects intercept and slope and predicted responses for each
 time step (i.e. cycle or year) represented in the data. This is mostly an internal function run within case_boot_lmer(),
 but can be used as a stand alone function.
 }
