@@ -71,35 +71,45 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name", group = NA,
   error_dist <- match.arg(error_dist)
   stopifnot(is.numeric(num_reps))
 
-  if(chatty == TRUE){cat("Running bootstrap:")}
+  if(chatty == TRUE){cat("Running bootstrap:", "\n")}
+
+  # For error_dist = nonpar, create new distribution for sampling error
+  # vectors of data
+
+  sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
+
+  rvar <- if(error_dist == 'nonpar'){
+    new_r(sampling_data$diff, type = 'continuous')
+  } else {rnorm(0, sampling_sd)}
+
   boot_mods <- map_dfr(seq_len(num_reps),
                        function(x){
                        if(chatty == TRUE){cat(x, "out of", num_reps, "\n")}
-                       case_boot_power(data, y = y, years = 1:5, ID = ID,
+                       case_boot_power(data, y = y, years = years, ID = ID,
                                         random_type = 'intercept', sample = T, sample_num = x,
                                         effect_size = effect_size, sample_size = sample_size,
                                         error_dist = 'nonpar', sampling_data = sampling_data)
 
                        })
 
-  head(boot_mods)
-
   boot_mods_wide <- boot_mods %>% select(-term, -isSingular) %>%
     pivot_wider(names_from = c(effect_size, sample_size),
                                               values_from = estimate) %>% data.frame()
-  head(boot_mods_wide)
 
   boot_CIs <- data.frame(t(apply(boot_mods_wide %>% select(-boot_num) , 2,
                                  quantile, probs = c(0.025, 0.975), na.rm = T)))#,
                          # num_boots = sum((ifelse(is.na(boot_mods$isSingular), 0, 1))),
                          # num_boots_sing = sum(boot_mods$isSingular, na.rm = T))
+  boot_CIs$comb = rownames(boot_CIs)
+
+  head(boot_CIs)
 
   #+++++ ENDED HERE. NEED TO ADD BACK IN THE NUMBER OF SUCCESSFUL BOOTSTRAPS AND ISSINGULAR FOR FINAL
   #+++++ THEN ADD COLUMN OF EFFECT SIZE, SAMPLE SIZE AND CALCULATE POWER.
-  head(boot_CIs)
-
-  num_boot_sing <- unique(boot_CIs$num_boots_sing)
-  num_boot_fail <- num_reps - max(boot_CIs$num_boots)
+#  head(boot_CIs)
+#
+#   num_boot_sing <- unique(boot_CIs$num_boots_sing)
+#   num_boot_fail <- num_reps - max(boot_CIs$num_boots)
 
 
 }

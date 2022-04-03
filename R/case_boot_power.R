@@ -6,7 +6,7 @@
 #' returns model output for the specified effect and sample sizes. Only enabled for lmer(). Internal function used in power_sim
 #'
 #' @importFrom purrr map_df map_dfc map_dfr map2_dfr
-#' @importFrom dplyr filter left_join select
+#' @importFrom dplyr case_when filter left_join mutate select
 #' @importFrom tidyr pivot_wider
 #'
 #' @param data Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
@@ -44,7 +44,8 @@
 #' @export
 
 case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name", group = NA,
-                            random_type = c("intercept", "slope"), sample = TRUE,
+                            random_type = c("intercept", "slope"),
+                            sample = TRUE,
                             error_dist = c("nonpar", 'normal'),
                             sampling_data = NA, sampling_sd = NA, effect_size = seq(-50, 50, 5),
                             sample_size = seq(10, 100, 10), sample_num = 1){
@@ -63,10 +64,21 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name", group =
   stopifnot(c(y, ID) %in% names(data))
   error_dist <- match.arg(error_dist)
 
-
   # Set up progress tracking
   chatty <- ifelse(exists("chatty"), chatty, TRUE)
   sample_num <- ifelse(exists("sample_num"), sample_num, 1)
+
+  # # For error_dist = nonpar, create new distribution for sampling error
+  # # vectors of data
+  #
+  # sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
+  #
+  # rvar <- if(error_dist == 'nonpar'){
+  #   new_r(sampling_data$diff, type = 'continuous')
+  # } else {rnorm(0, sampling_sd)}
+
+  # If years don't start at 1, rescale start at 1
+  if(min(years) > 1){years <- years - min(years) + 1}
 
   # Set up bootstrap
   plots <- data.frame(ID = unique(data[,ID]))
@@ -90,49 +102,60 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name", group =
   data_samp <- dplyr::left_join(samp, data, by = "ID") %>%
     dplyr::arrange(case)
 
-  # For error_dist = nonpar, create new distribution for sampling error
-  # vectors of data
+  # Prepare vectors to iterate over
+  sim_cols <- c(paste0("ysim", years[-1]))
+  prev_cols <- c(y, sim_cols[1:length(sim_cols) - 1])
+  es_cols <- paste0("ysim",
+                    case_when(effect_size < 0 ~ "_dec",
+                              effect_size == 0 ~ "_",
+                              effect_size > 0 ~ "_inc"),
+                    abs(effect_size))
 
-  sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
+  sim_mat <- expand.grid(sample_size = sample_size, effect_size = es_cols, stringsAsFactors = F) %>% data.frame()
 
-  rvar <- if(error_dist == 'nonpar'){
-    new_r(sampling_data$diff, type = 'continuous')
-    } else {rnorm(0, sampling_sd)}
+  # Build full wide dataset with years and number of samples for the for loop on simcols
+  data_sim <- data_samp
+  data_sim[, sim_cols] <- as.numeric(NA_real_)
 
-  # If years don't start at 1, rescale start at 1
-  if(min(years) > 1){years <- years - min(years) + 1}
+  # Build long-version of data_sim to bind simulated columns to at end of for loop
+  data_sim_long <- data_sim %>% select(-year) %>% rename(ysim1 = y) %>%
+    pivot_longer(cols = -c(ID, sample_size, case),
+                 names_to = "year",
+                 values_to = "y") %>%
+    mutate(year = as.numeric(substr(year, 5, 5))) %>% arrange(ID, sample_size, year) %>%
+    select(-y) %>% right_join(., data_sim %>% select(ID, sample_size, case, y),
+                              by = c("ID", "sample_size", "case"))
 
-  # Build full dataset with years and number of samples that the next line will add ysim to
-  data_pre_sim <- expand.grid(data_samp$ID, years[2:length(years)])
-  colnames(data_pre_sim) <- c("ID", "year")
+  # Nested for loop creates a dataframe that includes a column for each effect size, and simulates
+  # trends by using the previous years trend, rather than time = 0 trend.
+  for(es in effect_size){
+    escol = paste0("ysim",
+                   case_when(es < 0 ~ "_dec",
+                             es == 0 ~ "_",
+                             es > 0 ~ "_inc"),
+                   abs(es))
 
-  data_comb <- left_join(data_samp %>% select(ID, sample_size, case, y),
-                         data_pre_sim, by = c("ID")) %>% unique() #++++ Figure out why tripled
+  for(col in sim_cols){ # Vectorized approach to simulating consecutive trends based on previous year
+    prevcol = which(names(data_sim) == col) - 1
+    data_sim[, col] <- data_sim[,prevcol] +
+       (data_sim[,prevcol] * (es/100)) + rvar(nrow(data_sim))
+    es_dat <- data_sim %>% select(-year) %>% mutate(ysim1 = y) %>%
+      pivot_longer(cols = c(ysim1, all_of(sim_cols)),
+                   names_to = "year",
+                   values_to = escol) %>%
+      mutate(year = as.numeric(substr(year, 5, 5))) %>% select(escol)
 
-  data_comb2 <- rbind(data_samp, data_comb)
+    data_sim_long[, escol] <- es_dat
 
-# Simulate data for each effect size.
-  # Function to simulate trends for each effect size
-  sim_data <- function(es){
-    simcol = paste0("ysim", ifelse(es < 0, "_dec", "_inc"), abs(es))
-    n = nrow(data_comb2)
-    data_sim <- data_comb2 %>% mutate(!!simcol := ifelse(year == 1, y,
-                  y + (y * (es/100) * (year - 1)) + rvar(n)))
-    data_sim %>% select(!!simcol)
     }
+  }
 
-  # Create dataset
-  data_sim1 <- data_comb2 %>% mutate(map_dfc(effect_size, ~sim_data(.)))
-
-  simcols = paste0("ysim", ifelse(effect_size < 0, "_dec", "_inc"), abs(effect_size))
-  sim_mat <- expand.grid(sample_size, simcols) %>% data.frame()
-  colnames(sim_mat) <- c("sample_size", "es")
-  sim_mat$es <- as.character(sim_mat$es)
-
- # Run the model for each sample size and effect size combination
+  # sampsize = sim_mat[1,1]
+  # resp = sim_mat[1,2]
+  # Run the model for each sample size and effect size combination
   boot_mod <-   map2_dfr(sim_mat[,1], sim_mat[,2],
                   function(sampsize, resp){
-                    ss_dat <- data_sim1 %>% filter(sample_size == sampsize) %>%
+                    ss_dat <- data_sim_long %>% filter(sample_size == sampsize) %>%
                        select(case, sample_size, year, resp)
                     trend_lmer(ss_dat, x = 'year', y = resp, ID = "case",
                                random_type = random_type) %>%
@@ -140,10 +163,9 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name", group =
                     mutate(effect_size = resp,
                            sample_size = sampsize,
                            boot_num = ifelse(exists("sample_num"), sample_num, 1))
-                                  }) %>% data.frame()
+               # if(chatty == TRUE & (sample_num %% 10) == 0){cat(".")} #prints tick every 10 reps
+                                  }) #%>% data.frame()
 
-  if(chatty == TRUE & (sample_num %% 10) == 0){cat(".")} #prints tick every 10 reps
-
-  return(boot_mod)
+return(boot_mod)
 }
 
