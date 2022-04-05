@@ -1,9 +1,9 @@
 #' @include case_boot_power.R
 #'
-#' @title power_sim: Calculates power for hierarchical models using simulation and case bootstrap.
+#' @title power_sim: Calculates power for hierarchical models using simulation and case bootstrap
 #'
 #' @description Fits models using a range of effect and samples sizes using non-parametric bootstrapping to assess significance.
-#' For each level of effect size and sample size, returns the power to detect the trend, along with average lower and upper 95%
+#' For each level of effect size and sample size, returns the power to detect the trend, along with average lower and upper 95\%
 #' confidence intervals for each combination across the replicate bootstraps.
 #'
 #' @importFrom dplyr arrange group_by mutate summarize
@@ -28,7 +28,7 @@
 #' for each sample named samp1 and samp2. The samp1 column is the first sample of the data. The samp2 column is the replicate
 #' sample of the site.
 #' @param sampling_sd If error_dist = 'normal', must specify the standard deviation  for the distribution. Otherwise leave blank.
-#' @param effect_size The range of effect sizes to test. The default is -50 to 50% change at 5% increments.
+#' @param effect_size The range of effect sizes to test. The default is -50 to 50\% change at 5\% increments.
 #' @param sample_size The range of sample sizes to test. The default is 10 to 100 in increments of 10.
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
 #' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.
@@ -38,7 +38,7 @@
 #'
 #'  # Generate fake datasets
 #'  # sample data
-#'  site = paste0("site-", sprintf("%02d", rep(1:30))) # vector of 30 site names
+#'  site = paste0("site.", sprintf("\%02d", rep(1:30))) # vector of 30 site names
 #'  y = runif(30) # random data for 30 sites
 #'  yq = y[1:10] + rnorm(10, mean = 0, sd = 0.2) # qaqc data for first 30 sites generated
 #'    #  by y0 value plus random sampling error
@@ -55,17 +55,17 @@
 #'  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
 #'  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 #'
-#'  dat_qc_wide <- right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) %>%
+#'  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \%>\%
 #'    rename(samp1 = y1, samp2 = y2)
 #'
 #'  # Run function
 #'  # Non-parametric sampling error
-#'  pwr_np <- power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
+#'  pwr_np <- forestTrends::power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
 #'              error_dist = 'nonpar', sampling_data = data_qc_wide,
 #'              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
 #'
 #'  # Normal sampling error
-#'  sim1 <- case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
+#'  sim1 <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
 #'            error_dist = 'norma', sampling_sd = 0.2,
 #'            effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
 #' }
@@ -75,13 +75,13 @@
 #' sample size, with each bootstrap sample size equaling the sample size. For each of these datasets, trends are simulated
 #' using the specified effect sizes plus random sampling error, with each year's trend based on the previous year's value,
 #' rather than the starting point. This process is repeated num_reps number of times to generate a sampling distribution
-#' of slope estimates that are then used to calculate 95% confidence intervals of the slope estimate. If the resulting
+#' of slope estimates that are then used to calculate 95\% confidence intervals of the slope estimate. If the resulting
 #' confidence intervals do not contain 0, they are considered significant. This is then repeated num_reps number of times
 #' to calculate power, which is the percent of trends that are significant divided by num_reps.
 #'
 #' @export
 
-power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name", group = NA,
+power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                       random_type = c("intercept", "slope"),
                       num_reps = 10, error_dist = c("nonpar", 'normal'),
                       sampling_data = NA, sampling_sd = NA, effect_size = seq(-50, 50, 5),

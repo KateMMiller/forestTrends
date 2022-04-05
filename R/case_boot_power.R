@@ -29,16 +29,14 @@
 #' for each sample named samp1 and samp2. The samp1 column is the first sample of the data. The samp2 column is the replicate
 #' sample of the site.
 #' @param sampling_sd If error_dist = 'normal', must specify the standard deviation  for the distribution. Otherwise leave blank.
-#' @param effect_size The range of effect sizes to test. The default is -50 to 50% change at 5% increments.
+#' @param effect_size The range of effect sizes to test. The default is -50 to 50\% change at 5\% increments.
 #' @param sample_size The range of sample sizes to test. The default is 10 to 100 in increments of 10.
-#' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
-#' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.
 #'
 #' @examples
 #' \dontrun{
 #'  ### Generate fake datasets
 #'  # sample data
-#'  site = paste0("site-", sprintf("%02d", rep(1:30))) # vector of 30 site names
+#'  site = paste0("site.", sprintf("\%02d", rep(1:30))) # vector of 30 site names
 #'  y = runif(30) # random data for 30 sites
 #'  yq = y[1:10] + rnorm(10, mean = 0, sd = 0.2) # qaqc data for first 30 sites generated
 #'    #  by y0 value plus random sampling error
@@ -55,7 +53,7 @@
 #'  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
 #'  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 #'
-#'  dat_qc_wide <- right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) %>%
+#'  dat_qc_wide <- right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \%>\%
 #'    rename(samp1 = y1, samp2 = y2)
 #'
 #'  ### Run function
