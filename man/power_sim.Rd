@@ -97,7 +97,7 @@ confidence intervals for each combination across the replicate bootstraps.
  # Run function
  # Non-parametric sampling error
  pwr_np <- forestTrends::power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
-             error_dist = 'nonpar', sampling_data = data_qc_wide,
+             error_dist = 'nonpar', sampling_data = dat_qc_wide,
              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
 
  # Normal sampling error
