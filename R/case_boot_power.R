@@ -64,7 +64,7 @@
 #'
 #'  # Normal sampling error
 #'  sim_norm <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
-#'                error_dist = 'norma', sampling_sd = 0.2,
+#'                error_dist = 'normal', sampling_sd = 0.2,
 #'                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
 #' }
 #'
@@ -85,10 +85,10 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
     stop("Package 'pdqr' needed for this function to work. Please install it.", call. = FALSE)
   }
   if(is.null(data)){stop("Must specify data to run function")}
-  stopifnot(class(data) == "data.frame")
-  stopifnot(!is.na(sampling_data) & class(sampling_data) == "data.frame")
+  stopifnot(is.data.frame(data))
+  stopifnot(is.na(sampling_data) | is.data.frame(sampling_data))
   if(is.null(y)){stop("Must specify y variable to run function")}
-  if(any(!is.null(sampling_data) & !c("samp1", "samp2") %in% names(sampling_data))){
+  if(!is.na(sampling_data) && !c("samp1", "samp2") %in% names(sampling_data)){
     stop("The data.frame specified in sampling_data does not contain the required columns 'samp1' and 'samp2'")}
   stopifnot(all(is.numeric(years)))
   if(is.null(ID)){stop("Must specify ID variable to run function")}
@@ -103,9 +103,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   # in case this function is being used without power_sim()
 
   if(!exists('rvar')){
-  sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
-
-  rvar <- if(error_dist == 'nonpar'){
+    rvar <- if(error_dist == 'nonpar'){
+    sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
     pdqr::new_r(sampling_data$diff, type = 'continuous')
   } else {rnorm(0, sampling_sd)}
   }

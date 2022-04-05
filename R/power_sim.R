@@ -61,13 +61,13 @@
 #'  # Run function
 #'  # Non-parametric sampling error
 #'  pwr_np <- forestTrends::power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
-#'              error_dist = 'nonpar', sampling_data = dat_qc_wide,
+#'              error_dist = 'nonpar', sampling_data = dat_qc_wide, num_reps = 100,
 #'              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
 #'
 #'  # Normal sampling error
-#'  sim1 <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
-#'            error_dist = 'norma', sampling_sd = 0.2,
-#'            effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
+#'  pwr_norm <- forestTrends::power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
+#'                error_dist = 'normal', sampling_sd = 0.2, num_reps = 100,
+#'                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
 #' }
 #'
 #' @return A dataframe that contains a row for every effect size and sample size combination (power combination) and the
@@ -92,9 +92,9 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   }
   if(is.null(data)){stop("Must specify data to run function")}
   stopifnot(class(data) == "data.frame")
-  stopifnot(!is.na(sampling_data) & class(sampling_data) == "data.frame")
+  stopifnot(is.na(sampling_data) | is.data.frame(sampling_data))
   if(is.null(y)){stop("Must specify y variable to run function")}
-  if(any(!is.null(sampling_data) & !c("samp1", "samp2") %in% names(sampling_data))){
+  if(!is.na(sampling_data) && !c("samp1", "samp2") %in% names(sampling_data)){
     stop("The data.frame specified in sampling_data does not contain the required columns 'samp1' and 'samp2'")}
   stopifnot(all(is.numeric(years)))
   if(is.null(ID)){stop("Must specify ID variable to run function")}
@@ -106,13 +106,12 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
   effect_size <- effect_size[effect_size != 0]
 
-  if(chatty == TRUE){cat("Running bootstrap:", "\n")}
+  if(chatty == TRUE){cat("Running bootstraps:", "\n")}
 
   # For error_dist = nonpar, create new distribution for sampling error
+rvar <- if(error_dist == 'nonpar'){
   sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
-
-  rvar <- if(error_dist == 'nonpar'){
-    pdqr::new_r(sampling_data$diff, type = 'continuous')
+  pdqr::new_r(sampling_data$diff, type = 'continuous')
   } else {rnorm(0, sampling_sd)}
 
   # Need to do 2 rounds of simulation. First, sample the data and simulate trends using case_boot_power times

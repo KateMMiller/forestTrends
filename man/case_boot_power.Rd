@@ -86,7 +86,7 @@ specified by num_reps. Only enabled for lmer(). Internal function used in power_
 
  # Normal sampling error
  sim_norm <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
-               error_dist = 'norma', sampling_sd = 0.2,
+               error_dist = 'normal', sampling_sd = 0.2,
                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
 }
 
