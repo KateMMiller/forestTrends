@@ -18,8 +18,8 @@ case_boot_power(
 )
 }
 \arguments{
-\item{data}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
-variable, and at least one column with a response variable.}
+\item{data}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), and at least one
+column with a response variable.}
 
 \item{y}{Quoted response variable in the data frame. Must be numeric.}
 

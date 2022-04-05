@@ -13,8 +13,8 @@
 #' @importFrom tidyselect all_of
 #' @importFrom tidyr pivot_longer
 #'
-#' @param data Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
-#' variable, and at least one column with a response variable.
+#' @param data Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), and at least one
+#' column with a response variable.
 #' @param y Quoted response variable in the data frame. Must be numeric.
 #' @param years Vector of years to run simulation out to. Default is 1:5 years.
 #' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters

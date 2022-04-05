@@ -20,8 +20,8 @@ power_sim(
 )
 }
 \arguments{
-\item{data}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), a column containing a time
-variable, and at least one column with a response variable.}
+\item{data}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), and at least
+one column with a response variable.}
 
 \item{y}{Quoted response variable in the data frame. Must be numeric.}
 
@@ -51,18 +51,19 @@ sample of the site.}
 
 \item{sample_size}{The range of sample sizes to test. The default is 10 to 100 in increments of 10.}
 
-\item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
-in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.}
+\item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console, including the number of the
+power sample currently running and a tick for every replicate within the power bootstrap. FALSE will not print
+ progress in console.}
 }
 \value{
-A dataframe that contains a row for every effect size and sample size combination (power combination) and the
+A data frame that contains a row for every effect size and sample size combination (power combination) and the
 power to detect trends. The process uses case_boot_power() to bootstrap the original dataset with replacement for each
-sample size, with each bootstrap sample size equaling the sample size. For each of these datasets, trends are simulated
-using the specified effect sizes plus random sampling error, with each year's trend based on the previous year's value,
-rather than the starting point. This process is repeated num_reps number of times to generate a sampling distribution
-of slope estimates that are then used to calculate 95\% confidence intervals of the slope estimate. If the resulting
-confidence intervals do not contain 0, they are considered significant. This is then repeated num_reps number of times
-to calculate power, which is the percent of trends that are significant divided by num_reps.
+sample size, with each bootstrap sample size equaling the specified sample size. For each of these datasets, trends are
+simulated using the specified effect sizes plus random sampling error, with each year's trend based on the previous
+year's value, rather than the starting point. This process is repeated num_reps number of times to generate a sampling
+distribution of slope estimates that are then used to calculate 95\% confidence intervals of the slope estimate. If the
+resulting confidence intervals do not contain 0, they are considered significant. This is then repeated num_reps number
+of times to calculate power, which is the percent of trends that are significant divided by num_reps.
 }
 \description{
 Fits models using a range of effect and samples sizes using non-parametric bootstrapping to assess significance.
