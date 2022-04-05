@@ -25,6 +25,8 @@ variable, and at least one column with a response variable. If Unit_Code is in t
 
 \item{ylab}{Quoted title for y axis.}
 
+\item{model_type}{Options are "lmer" (Default) or "loess".}
+
 \item{group}{Quoted column for facet wraps. If not specified, only 1 plot will be returned}
 
 \item{ribbon}{Options are TRUE or FALSE (Default). If TRUE, will plot error as a ribbon instead of errorbars.}

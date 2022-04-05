@@ -14,6 +14,7 @@
 #' variable, and at least one column with a response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.
 #' @param xlab Quoted title for x axis.
 #' @param ylab Quoted title for y axis.
+#' @param model_type Options are "lmer" (Default) or "loess".
 #' @param group Quoted column for facet wraps. If not specified, only 1 plot will be returned
 #' @param ribbon Options are TRUE or FALSE (Default). If TRUE, will plot error as a ribbon instead of errorbars.
 #' @param sign_color String of 4 colors to indicate a trend that is not modeled, not significant or significant increase

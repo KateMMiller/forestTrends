@@ -5,8 +5,7 @@ Version: 0.1.4
 Author: Kate Miller, John Paul Schmit
 Maintainer: Kate Miller <kathryn_miller@nps.gov>
 Description: This package contains functions that are tailord to NPS forest data for analyzing trends using case bootstrap and random intercept model.
-License: 
-  Public Domain
+License: MIT + file LICENSE
 Depends: 
   R(>= 4.0)
 Imports: 
@@ -18,6 +17,7 @@ Imports:
     magrittr,
     purrr,
     stringr,
+    tidyselect,
     tidyr
 Suggests:
     fANCOVA,

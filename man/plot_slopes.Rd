@@ -17,6 +17,8 @@ plot_slopes(
 \item{df}{Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.}
 
+\item{ylabel}{Quoted title for y axis.}
+
 \item{order}{Quoted column plot will sort by if specified.}
 
 \item{group}{Group to color code by. If not specified, all points and lines will be black. If "Network" is specified,
@@ -25,10 +27,6 @@ then points and lines will be color coded by network, where ERMN is blue, MIDN i
 \item{sign_only}{TRUE/FALSE. Denotes whether to plot all trends (FALSE; Default) or only significant trends (TRUE).}
 
 \item{legend_position}{Quoted position for legend following ggplot positions. Default is 'none'.}
-
-\item{xlab}{Quoted title for x axis.}
-
-\item{ylab}{Quoted title for y axis.}
 }
 \description{
 Function plots the slopes from case_boot_lmer output
