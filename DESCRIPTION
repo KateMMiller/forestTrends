@@ -1,7 +1,7 @@
 Package: forestTrends
 Type: Package
 Title: Package uses case bootstrap to analyze trends with NPS forest data
-Version: 0.1.3
+Version: 0.1.4
 Author: Kate Miller, John Paul Schmit
 Maintainer: Kate Miller <kathryn_miller@nps.gov>
 Description: This package contains functions that are tailord to NPS forest data for analyzing trends using case bootstrap and random intercept model.
@@ -20,7 +20,8 @@ Imports:
     stringr,
     tidyr
 Suggests:
-    fANCOVA
+    fANCOVA,
+    pdqr
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.2
@@ -29,6 +30,8 @@ Collate:
     'case_boot_sample.R'
     'case_boot_lmer.R'
     'case_boot_loess.R'
+    'case_boot_power.R'
     'plot_slopes.R'
     'plot_trend_response.R'
+    'power_sim.R'
     'trend_loess.R'
