@@ -121,11 +121,11 @@ rvar <- if(error_dist == 'nonpar'){
 
   sim_full <- map_dfr(seq_len(num_reps), function(reps){
     if(chatty == TRUE){cat(reps, "out of", num_reps)}
+
     sim_level1 <- map_dfr(seq_len(num_reps), function(n){
-    if(chatty == TRUE){
-      cat(".")
-      if(n == num_reps){cat(".Done", "\n")}
-      }
+
+      if(chatty == TRUE){cat(".")
+        if(n == num_reps){cat(".Done", "\n")}}
 
      case_boot_power(data, y = y, years = years, ID = ID,
                      random_type = random_type,
