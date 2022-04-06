@@ -10,7 +10,7 @@ power_sim(
   years = 1:5,
   ID = "Plot_Name",
   random_type = c("intercept", "slope"),
-  num_reps = 10,
+  num_reps = 100,
   error_dist = c("nonpar", "normal"),
   sampling_data = NA,
   sampling_sd = NA,
@@ -20,55 +20,68 @@ power_sim(
 )
 }
 \arguments{
-\item{data}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), and at least
-one column with a response variable.}
+\item{data}{Data frame containing an ID column that identifies each sample unit
+(e.g., Plot_Name), and at least one column with a response variable.}
 
 \item{y}{Quoted response variable in the data frame. Must be numeric.}
 
 \item{years}{Vector of years to run simulation out to. Default is 1:5 years.}
 
-\item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
+\item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name",
+and assumes the first 4 characters
 are a park code.}
 
-\item{random_type}{Specify "intercept" or "slope". The intercept option (default) will fit a random intercept model
-with (1|ID) as random component. The slope option will fit a random slope model with (1 + year|ID) as the random component.}
+\item{random_type}{Specify "intercept" or "slope". The intercept option (default)
+will fit a random intercept model
+with (1|ID) as random component. The slope option will fit a random slope model
+with (1 + year|ID) as the random component.}
 
-\item{num_reps}{Number of replicate bootstraps to run for each level of effect and sample size. Default is 10 for faster
-testing. However, 500-1000 is the better number for real analyses (note this could take many hours).}
+\item{num_reps}{Number of replicate bootstraps to run for each level of effect
+and sample size. Default is 100 for faster testing. However, 500-1000 is the
+better number for real analyses (note this could take many hours).}
 
-\item{error_dist}{Either "nonpar" or "normal". If nonpar is chosen, must specify a dataset of repeated measures, like
-from QA/QC sampling, to generate an error distribution based on the data. If normal is chosen, then a normal distribution
-will be used. This will be used to add sampling error to simulated trends that are at an appropriate scale to the dataset.}
+\item{error_dist}{Either "nonpar" or "normal". If nonpar is chosen, must specify
+a dataset of repeated measures, like from QA/QC sampling, to generate an error
+distribution based on the data. If normal is chosen, then a normal distribution
+will be used. This will be used to add sampling error to simulated trends that
+are at an appropriate scale to the dataset.}
 
-\item{sampling_data}{If error_dist = 'nonpar', specify a dataset that has repeated measures for sites. Otherwise leave blank.
-The columns in the sampling data should include a unique ID column that is specified via the ID argument, and two columns
-for each sample named samp1 and samp2. The samp1 column is the first sample of the data. The samp2 column is the replicate
-sample of the site.}
+\item{sampling_data}{If error_dist = 'nonpar', specify a dataset that has
+repeated measures for sites. Otherwise leave blank. The columns in the sampling
+data should include a unique ID column that is specified via the ID argument,
+and two columns for each sample named samp1 and samp2. The samp1 column is
+the first sample of the data. The samp2 column is the replicate sample of the site.}
 
-\item{sampling_sd}{If error_dist = 'normal', must specify the standard deviation  for the distribution. Otherwise leave blank.}
+\item{sampling_sd}{If error_dist = 'normal', must specify the standard deviation
+for the distribution. Otherwise leave blank.}
 
-\item{effect_size}{The range of effect sizes to test. The default is -50 to 50\% change at 5\% increments.}
+\item{effect_size}{The range of effect sizes to test. The default is -50 to 50\%
+change at 5\% increments.}
 
-\item{sample_size}{The range of sample sizes to test. The default is 10 to 100 in increments of 10.}
+\item{sample_size}{The range of sample sizes to test. The default is 10 to 100
+in increments of 10.}
 
-\item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console, including the number of the
-power sample currently running and a tick for every replicate within the power bootstrap. FALSE will not print
- progress in console.}
+\item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console,
+including the number of the power sample currently running and a tick for every
+replicate within the power bootstrap. FALSE will not print progress in console.}
 }
 \value{
-A data frame that contains a row for every effect size and sample size combination (power combination) and the
-power to detect trends. The process uses case_boot_power() to bootstrap the original dataset with replacement for each
-sample size, with each bootstrap sample size equaling the specified sample size. For each of these datasets, trends are
-simulated using the specified effect sizes plus random sampling error, with each year's trend based on the previous
-year's value, rather than the starting point. This process is repeated num_reps number of times to generate a sampling
-distribution of slope estimates that are then used to calculate 95\% confidence intervals of the slope estimate. If the
-resulting confidence intervals do not contain 0, they are considered significant. This is then repeated num_reps number
-of times to calculate power, which is the percent of trends that are significant divided by num_reps.
+A data frame that contains a row for every effect size and sample size
+combination (power combination) and the power to detect trends. The process uses
+case_boot_power() to bootstrap the original dataset with replacement for each
+sample size, with each bootstrap sample size equaling the specified sample size.
+For each of these datasets, trends are simulated using the specified effect sizes
+plus random sampling error, with each year's trend based on the previous year's
+value, rather than the starting point. Then case_boot_lmer() is used to determine
+whether there's a significant trend for each power combination. Finally, this process
+is repeated num_reps number of times to calculate power, which is the percent
+of trends that are significant divided by the num_reps.
 }
 \description{
-Fits models using a range of effect and samples sizes using non-parametric bootstrapping to assess significance.
-For each level of effect size and sample size, returns the power to detect the trend, along with average lower and upper 95\%
-confidence intervals for each combination across the replicate bootstraps.
+Fits models using a range of effect and samples sizes using non-parametric
+bootstrapping to assess significance. For each level of effect size and sample size,
+returns the power to detect the trend, along with average lower and upper 95\% confidence
+intervals for each combination across the replicate bootstraps.
 }
 \examples{
 \dontrun{

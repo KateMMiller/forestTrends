@@ -14,45 +14,63 @@ case_boot_power(
   sampling_data = NA,
   sampling_sd = NA,
   effect_size = seq(-50, 50, 5),
-  sample_size = seq(10, 100, 10)
+  sample_size = seq(10, 100, 10),
+  num_reps = 100,
+  chatty = TRUE
 )
 }
 \arguments{
-\item{data}{Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), and at least one
-column with a response variable.}
+\item{data}{Data frame containing an ID column that identifies each sample unit
+(e.g., Plot_Name), and at least one #' column with a response variable.}
 
 \item{y}{Quoted response variable in the data frame. Must be numeric.}
 
 \item{years}{Vector of years to run simulation out to. Default is 1:5 years.}
 
-\item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
-are a park code.}
+\item{ID}{Quoted name of column containing site or plot IDs. Default is "Plot_Name",
+and assumes the first 4 characters #' are a park code.}
 
-\item{random_type}{Specify "intercept" or "slope". The intercept option (default) will fit a random intercept model
-with (1|ID) as random component. The slope option will fit a random slope model with (1 + year|ID) as the random component.}
+\item{random_type}{Specify "intercept" or "slope". The intercept option (default)
+will fit a random intercept model with (1|ID) as random component. The slope option
+will fit a random slope model with (1 + year|ID) as the random component.}
 
-\item{error_dist}{Either "nonpar" or "normal". If nonpar is chosen, must specify a dataset of repeated measures, like
-from QA/QC sampling, to generate an error distribution based on the data. If normal is chosen, then a normal distribution
-will be used. This will be used to add sampling error to simulated trends that are at an appropriate scale to the dataset.}
+\item{error_dist}{Either "nonpar" or "normal". If nonpar is chosen, must specify
+a dataset of repeated measures, like from QA/QC sampling, to generate an error
+distribution based on the data. If normal is chosen, then a normal distribution
+will be used. This will be used to add sampling error to simulated trends that
+are at an appropriate scale to the dataset.}
 
-\item{sampling_data}{If error_dist = 'nonpar', specify a dataset that has repeated measures for sites. Otherwise leave blank.
-The columns in the sampling data should include a unique ID column that is specified via the ID argument, and two columns
-for each sample named samp1 and samp2. The samp1 column is the first sample of the data. The samp2 column is the replicate
-sample of the site.}
+\item{sampling_data}{If error_dist = 'nonpar', specify a dataset that has repeated
+measures for sites. Otherwise leave blank. The columns in the sampling data should
+include a unique ID column that is specified via the ID argument, and two columns
+for each sample named samp1 and samp2. The samp1 column is the first sample of
+the data. The samp2 column is the replicate sample of the site.}
 
-\item{sampling_sd}{If error_dist = 'normal', must specify the standard deviation  for the distribution. Otherwise leave blank.}
+\item{sampling_sd}{If error_dist = 'normal', must specify the standard deviation
+for the distribution. Otherwise leave blank.}
 
-\item{effect_size}{The range of effect sizes to test. The default is -50 to 50\% change at 5\% increments.}
+\item{effect_size}{The range of effect sizes to test. The default is -50 to 50\%
+change at 5\% increments.}
 
-\item{sample_size}{The range of sample sizes to test. The default is 10 to 100 in increments of 10.}
+\item{sample_size}{The range of sample sizes to test. The default is 10 to 100
+in increments of 10.}
+
+\item{num_reps}{Number of replicate bootstraps to run for each level of effect and
+sample size. Default is 100 for faster testing. However, 500-1000 is the better number
+for real analyses (note this could take many hours).}
+
+\item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console,
+including the number of the power sample currently running and a tick for every
+replicate within the power bootstrap. FALSE will not print progress in console.}
 }
 \value{
 a data.frame with simulated trends
 }
 \description{
-Creates a bootstrapped sample of plots with replacement to simulate trends for a range of effect
-and sample sizes, and returns model output for the specified effect, sample sizes and number of bootstraps
-specified by num_reps. Only enabled for lmer(). Internal function used in power_sim().
+Creates a bootstrapped sample of plots with replacement to simulate
+trends for a range of effect #' and sample sizes, and returns model output for
+the specified effect, sample sizes and number of bootstraps specified by num_reps.
+Only enabled for lmer(). Internal function used in power_sim().
 }
 \examples{
 \dontrun{
@@ -82,12 +100,12 @@ specified by num_reps. Only enabled for lmer(). Internal function used in power_
  # Non-parametric sampling error
  sim_np <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
              error_dist = 'nonpar', sampling_data = dat_qc_wide,
-             effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
+             effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
 
  # Normal sampling error
  sim_norm <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
                error_dist = 'normal', sampling_sd = 0.2,
-               effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
+               effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
 }
 
 

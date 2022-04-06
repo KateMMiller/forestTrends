@@ -2,9 +2,10 @@
 #'
 #' @title case_boot_power: Samples original data and simulate trends over a range of effect and sample sizes
 #'
-#' @description Creates a bootstrapped sample of plots with replacement to simulate trends for a range of effect
-#' and sample sizes, and returns model output for the specified effect, sample sizes and number of bootstraps
-#' specified by num_reps. Only enabled for lmer(). Internal function used in power_sim().
+#' @description Creates a bootstrapped sample of plots with replacement to simulate
+#' trends for a range of effect #' and sample sizes, and returns model output for
+#' the specified effect, sample sizes and number of bootstraps specified by num_reps.
+#' Only enabled for lmer(). Internal function used in power_sim().
 #'
 #' @importFrom dplyr filter left_join mutate right_join select
 #' @importFrom purrr map_dfr map2_dfr
@@ -13,24 +14,37 @@
 #' @importFrom tidyselect all_of
 #' @importFrom tidyr pivot_longer
 #'
-#' @param data Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), and at least one
-#' column with a response variable.
+#' @param data Data frame containing an ID column that identifies each sample unit
+#' (e.g., Plot_Name), and at least one #' column with a response variable.
 #' @param y Quoted response variable in the data frame. Must be numeric.
 #' @param years Vector of years to run simulation out to. Default is 1:5 years.
-#' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
-#' are a park code.
-#' @param random_type Specify "intercept" or "slope". The intercept option (default) will fit a random intercept model
-#' with (1|ID) as random component. The slope option will fit a random slope model with (1 + year|ID) as the random component.
-#' @param error_dist Either "nonpar" or "normal". If nonpar is chosen, must specify a dataset of repeated measures, like
-#' from QA/QC sampling, to generate an error distribution based on the data. If normal is chosen, then a normal distribution
-#' will be used. This will be used to add sampling error to simulated trends that are at an appropriate scale to the dataset.
-#' @param sampling_data If error_dist = 'nonpar', specify a dataset that has repeated measures for sites. Otherwise leave blank.
-#' The columns in the sampling data should include a unique ID column that is specified via the ID argument, and two columns
-#' for each sample named samp1 and samp2. The samp1 column is the first sample of the data. The samp2 column is the replicate
-#' sample of the site.
-#' @param sampling_sd If error_dist = 'normal', must specify the standard deviation  for the distribution. Otherwise leave blank.
-#' @param effect_size The range of effect sizes to test. The default is -50 to 50\% change at 5\% increments.
-#' @param sample_size The range of sample sizes to test. The default is 10 to 100 in increments of 10.
+#' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name",
+#' and assumes the first 4 characters #' are a park code.
+#' @param random_type Specify "intercept" or "slope". The intercept option (default)
+#' will fit a random intercept model with (1|ID) as random component. The slope option
+#' will fit a random slope model with (1 + year|ID) as the random component.
+#' @param num_reps Number of replicate bootstraps to run for each level of effect and
+#' sample size. Default is 100 for faster testing. However, 500-1000 is the better number
+#' for real analyses (note this could take many hours).
+#' @param error_dist Either "nonpar" or "normal". If nonpar is chosen, must specify
+#' a dataset of repeated measures, like from QA/QC sampling, to generate an error
+#' distribution based on the data. If normal is chosen, then a normal distribution
+#' will be used. This will be used to add sampling error to simulated trends that
+#' are at an appropriate scale to the dataset.
+#' @param sampling_data If error_dist = 'nonpar', specify a dataset that has repeated
+#' measures for sites. Otherwise leave blank. The columns in the sampling data should
+#' include a unique ID column that is specified via the ID argument, and two columns
+#' for each sample named samp1 and samp2. The samp1 column is the first sample of
+#' the data. The samp2 column is the replicate sample of the site.
+#' @param sampling_sd If error_dist = 'normal', must specify the standard deviation
+#' for the distribution. Otherwise leave blank.
+#' @param effect_size The range of effect sizes to test. The default is -50 to 50\%
+#' change at 5\% increments.
+#' @param sample_size The range of sample sizes to test. The default is 10 to 100
+#' in increments of 10.
+#' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console,
+#' including the number of the power sample currently running and a tick for every
+#' replicate within the power bootstrap. FALSE will not print progress in console.
 #'
 #' @examples
 #' \dontrun{
@@ -60,12 +74,12 @@
 #'  # Non-parametric sampling error
 #'  sim_np <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
 #'              error_dist = 'nonpar', sampling_data = dat_qc_wide,
-#'              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
+#'              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
 #'
 #'  # Normal sampling error
 #'  sim_norm <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
 #'                error_dist = 'normal', sampling_sd = 0.2,
-#'                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
+#'                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
 #' }
 #'
 #'
@@ -78,8 +92,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                             error_dist = c("nonpar", 'normal'),
                             sampling_data = NA, sampling_sd = NA,
                             effect_size = seq(-50, 50, 5),
-                            sample_size = seq(10, 100, 10)
-                            ){
+                            sample_size = seq(10, 100, 10),
+                            num_reps = 100, chatty = TRUE){
 
   if(!requireNamespace("pdqr", quietly = TRUE)){
     stop("Package 'pdqr' needed for this function to work. Please install it.", call. = FALSE)
@@ -95,7 +109,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   stopifnot(c(y, ID) %in% names(data))
   error_dist <- match.arg(error_dist)
 
-  #sample_num <- ifelse(exists("sample_num"), sample_num, 1)
+  sample_num <- ifelse(exists("sample_num"), sample_num, 1) # for case_boot_lmer()
 
   # For error_dist = nonpar, create new distribution for sampling error
   # This is actually performed in the power_sim() function, so it's only
@@ -104,9 +118,9 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
   if(!exists('rvar')){
     rvar <- if(error_dist == 'nonpar'){
-    sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
-    pdqr::new_r(sampling_data$diff, type = 'continuous')
-  } else {rnorm(0, sampling_sd)}
+      sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
+      pdqr::new_r(sampling_data$diff, type = 'continuous')
+    } else {rnorm(0, sampling_sd)}
   }
 
   # If years don't start at 1, rescale start at 1
@@ -122,8 +136,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   samp <-
     map_dfr(sample_size, function(x){
       data.frame(ID = sample(plots$ID, x, replace = TRUE)) %>%
-                             mutate(sample_size = x)}
-      )
+        mutate(sample_size = x)}
+    )
 
   # Set up unique naming column, so plots selected more than once have a unique ID.
   samp$case <- as.factor(stringr::str_pad(rownames(samp), nchar(n), side ="left", pad = 0))
@@ -161,37 +175,48 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                    ifelse(es < 0, "_dec", "_inc"),
                    abs(es))
 
-  for(col in sim_cols){ # Vectorized approach to simulating consecutive trends based on previous year
-    prevcol = which(names(data_sim) == col) - 1
+    for(col in sim_cols){ # Vectorized approach to simulating consecutive trends based on previous year
+      prevcol = which(names(data_sim) == col) - 1
 
-    data_sim[, col] <- data_sim[, prevcol] +
-       (data_sim[,prevcol] * (es/100)) + rvar(nrow(data_sim))
+      data_sim[, col] <- data_sim[, prevcol] +
+        (data_sim[,prevcol] * (es/100)) + rvar(nrow(data_sim))
 
-    es_dat <- data_sim %>% select(-year) %>% mutate(ysim1 = y) %>%
-      pivot_longer(cols = c(ysim1, all_of(sim_cols)),
-                   names_to = "year",
-                   values_to = all_of(escol)) %>%
-      mutate(year = as.numeric(substr(year, 5, 5))) %>%
-      select(all_of(escol))
+      es_dat <- data_sim %>% select(-year) %>% mutate(ysim1 = y) %>%
+        pivot_longer(cols = c(ysim1, all_of(sim_cols)),
+                     names_to = "year",
+                     values_to = all_of(escol)) %>%
+        mutate(year = as.numeric(substr(year, 5, 5))) %>%
+        select(all_of(escol))
 
-    data_sim_long[, escol] <- es_dat
+      data_sim_long[, escol] <- es_dat
 
     }
   }
 
-  # Run the model for each sample size and effect size combination and number of reps
-  boot_mod <-   map2_dfr(sim_mat[,1], sim_mat[,2],
-                  function(sampsize, resp){
-                     ss_dat <- data_sim_long %>%
-                       filter(sample_size == sampsize) %>%
-                       select(case, sample_size, year, all_of(resp))
-                       trend_lmer(ss_dat, x = 'year', y = resp, ID = "case",
-                                  random_type = random_type) %>%
-                       filter(term == "Slope") %>%
-                       mutate(effect_size = resp,
-                              sample_size = sampsize)
-                     })
+  # Run case bootstrap to determine if there's a significant trend for each n x es comb.
+  boot_mod <- map2_dfr(sim_mat[,1], sim_mat[,2],
+                       function(sampsize, resp){
+                         ss_dat <- data_sim_long %>% filter(sample_size == sampsize) %>%
+                           select(case, sample_size, year, all_of(resp))
+
+                         iter <- as.numeric(rownames(sim_mat[sim_mat$sample_size == sampsize &
+                                                               sim_mat$effect_size == resp,]))
+
+                         if(chatty == TRUE & iter %% 5 == 1){cat(".")} #tick every 5th sim comb
+                         if(chatty == TRUE & iter == nrow(sim_mat)){cat(".Done", "\n")}
+
+
+                         mod <- case_boot_lmer(ss_dat, x = 'year', y = resp, ID = 'case',
+                                               num_reps = num_reps, random_type = random_type,
+                                               chatty = F)
+                         mod2 <- mod %>% filter(term == "Slope") %>%
+                           mutate(sample_size = sampsize,
+                                  effect_size = resp,
+                                  signif = ifelse(lower95 > 0 | upper95 < 0, 1, 0))
+                       })
 
   return(data.frame(boot_mod))
+
+
 }
 

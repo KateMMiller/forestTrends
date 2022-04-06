@@ -2,37 +2,48 @@
 #'
 #' @title power_sim: Calculates power for hierarchical models using simulation and case bootstrap
 #'
-#' @description Fits models using a range of effect and samples sizes using non-parametric bootstrapping to assess significance.
-#' For each level of effect size and sample size, returns the power to detect the trend, along with average lower and upper 95\%
-#' confidence intervals for each combination across the replicate bootstraps.
+#' @description Fits models using a range of effect and samples sizes using non-parametric
+#' bootstrapping to assess significance. For each level of effect size and sample size,
+#' returns the power to detect the trend, along with average lower and upper 95\% confidence
+#' intervals for each combination across the replicate bootstraps.
 #'
-#' @importFrom dplyr arrange group_by mutate summarize
+#' @importFrom dplyr arrange first group_by mutate summarize
 #' @importFrom magrittr %>%
 #' @importFrom purrr map_dfr
 #'
-#' @param data Data frame containing an ID column that identifies each sample unit (e.g., Plot_Name), and at least
-#' one column with a response variable.
+#' @param data Data frame containing an ID column that identifies each sample unit
+#' (e.g., Plot_Name), and at least one column with a response variable.
 #' @param y Quoted response variable in the data frame. Must be numeric.
 #' @param years Vector of years to run simulation out to. Default is 1:5 years.
-#' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name", and assumes the first 4 characters
+#' @param ID Quoted name of column containing site or plot IDs. Default is "Plot_Name",
+#' and assumes the first 4 characters
 #' are a park code.
-#' @param random_type Specify "intercept" or "slope". The intercept option (default) will fit a random intercept model
-#' with (1|ID) as random component. The slope option will fit a random slope model with (1 + year|ID) as the random component.
-#' @param num_reps Number of replicate bootstraps to run for each level of effect and sample size. Default is 10 for faster
-#' testing. However, 500-1000 is the better number for real analyses (note this could take many hours).
-#' @param error_dist Either "nonpar" or "normal". If nonpar is chosen, must specify a dataset of repeated measures, like
-#' from QA/QC sampling, to generate an error distribution based on the data. If normal is chosen, then a normal distribution
-#' will be used. This will be used to add sampling error to simulated trends that are at an appropriate scale to the dataset.
-#' @param sampling_data If error_dist = 'nonpar', specify a dataset that has repeated measures for sites. Otherwise leave blank.
-#' The columns in the sampling data should include a unique ID column that is specified via the ID argument, and two columns
-#' for each sample named samp1 and samp2. The samp1 column is the first sample of the data. The samp2 column is the replicate
-#' sample of the site.
-#' @param sampling_sd If error_dist = 'normal', must specify the standard deviation  for the distribution. Otherwise leave blank.
-#' @param effect_size The range of effect sizes to test. The default is -50 to 50\% change at 5\% increments.
-#' @param sample_size The range of sample sizes to test. The default is 10 to 100 in increments of 10.
-#' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console, including the number of the
-#' power sample currently running and a tick for every replicate within the power bootstrap. FALSE will not print
-#'  progress in console.
+#' @param random_type Specify "intercept" or "slope". The intercept option (default)
+#' will fit a random intercept model
+#' with (1|ID) as random component. The slope option will fit a random slope model
+#' with (1 + year|ID) as the random component.
+#' @param num_reps Number of replicate bootstraps to run for each level of effect
+#' and sample size. Default is 100 for faster testing. However, 500-1000 is the
+#' better number for real analyses (note this could take many hours).
+#' @param error_dist Either "nonpar" or "normal". If nonpar is chosen, must specify
+#' a dataset of repeated measures, like from QA/QC sampling, to generate an error
+#' distribution based on the data. If normal is chosen, then a normal distribution
+#' will be used. This will be used to add sampling error to simulated trends that
+#' are at an appropriate scale to the dataset.
+#' @param sampling_data If error_dist = 'nonpar', specify a dataset that has
+#' repeated measures for sites. Otherwise leave blank. The columns in the sampling
+#' data should include a unique ID column that is specified via the ID argument,
+#' and two columns for each sample named samp1 and samp2. The samp1 column is
+#' the first sample of the data. The samp2 column is the replicate sample of the site.
+#' @param sampling_sd If error_dist = 'normal', must specify the standard deviation
+#' for the distribution. Otherwise leave blank.
+#' @param effect_size The range of effect sizes to test. The default is -50 to 50\%
+#' change at 5\% increments.
+#' @param sample_size The range of sample sizes to test. The default is 10 to 100
+#' in increments of 10.
+#' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console,
+#' including the number of the power sample currently running and a tick for every
+#' replicate within the power bootstrap. FALSE will not print progress in console.
 #'
 #' @examples
 #' \dontrun{
@@ -71,20 +82,22 @@
 #'                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
 #' }
 #'
-#' @return A data frame that contains a row for every effect size and sample size combination (power combination) and the
-#' power to detect trends. The process uses case_boot_power() to bootstrap the original dataset with replacement for each
-#' sample size, with each bootstrap sample size equaling the specified sample size. For each of these datasets, trends are
-#' simulated using the specified effect sizes plus random sampling error, with each year's trend based on the previous
-#' year's value, rather than the starting point. This process is repeated num_reps number of times to generate a sampling
-#' distribution of slope estimates that are then used to calculate 95\% confidence intervals of the slope estimate. If the
-#' resulting confidence intervals do not contain 0, they are considered significant. This is then repeated num_reps number
-#' of times to calculate power, which is the percent of trends that are significant divided by num_reps.
+#' @return A data frame that contains a row for every effect size and sample size
+#' combination (power combination) and the power to detect trends. The process uses
+#' case_boot_power() to bootstrap the original dataset with replacement for each
+#' sample size, with each bootstrap sample size equaling the specified sample size.
+#' For each of these datasets, trends are simulated using the specified effect sizes
+#' plus random sampling error, with each year's trend based on the previous year's
+#' value, rather than the starting point. Then case_boot_lmer() is used to determine
+#' whether there's a significant trend for each power combination. Finally, this process
+#' is repeated num_reps number of times to calculate power, which is the percent
+#' of trends that are significant divided by the num_reps.
 #'
 #' @export
 
 power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                       random_type = c("intercept", "slope"),
-                      num_reps = 10, error_dist = c("nonpar", 'normal'),
+                      num_reps = 100, error_dist = c("nonpar", 'normal'),
                       sampling_data = NA, sampling_sd = NA, effect_size = seq(-50, 50, 5),
                       sample_size = seq(10, 100, 10),  chatty = TRUE){
 
@@ -110,64 +123,47 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   if(chatty == TRUE){cat("Running bootstraps:", "\n")}
 
   # For error_dist = nonpar, create new distribution for sampling error
-rvar <- if(error_dist == 'nonpar'){
-  sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
-  pdqr::new_r(sampling_data$diff, type = 'continuous')
+  rvar <- if(error_dist == 'nonpar'){
+    sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
+    pdqr::new_r(sampling_data$diff, type = 'continuous')
   } else {rnorm(0, sampling_sd)}
 
-  # Need to do 2 rounds of simulation. First, sample the data and simulate trends using case_boot_power times
-  # the number of replicates and determine if there's a significant trend. Then repeat this the number of replicates
+  # First, sample the data, simulate trends, and determine if significant
+  # using case_boot_power. Repeat process num_reps number of times
   # to calculate power as the percent of tests that were significant.
 
-  sim_full <- map_dfr(seq_len(num_reps), function(reps){
+  sim_mod <- map_dfr(seq_len(num_reps), function(reps){
     if(chatty == TRUE){cat(reps, "out of", num_reps)}
 
-    sim_level1 <- map_dfr(seq_len(num_reps), function(n){
-
-      if(chatty == TRUE){cat(".")
-        if(n == num_reps){cat(".Done", "\n")}}
-
-     case_boot_power(data, y = y, years = years, ID = ID,
+    case_boot_power(data, y = y, years = years, ID = ID,
                      random_type = random_type,
+                     num_reps = num_reps,
                      effect_size = effect_size,
                      sample_size = sample_size,
                      error_dist = error_dist,
                      sampling_data = sampling_data,
                      sampling_sd = sampling_sd) %>%
-       mutate(rep1 = n) # within level 1 replicate
-      }) # outside of sim level 1
-
-  # Summarize and store output of sim_level1
-  sim_level2 <- sim_level1 %>%
-    mutate(rep2 = reps) %>%
-     group_by(effect_size, sample_size, rep2) %>%
-     summarize(est = mean(estimate, na.rm = T),
-               lower95 = quantile(estimate, 0.025, na.rm = T),
-               upper95 = quantile(estimate, 0.975, na.rm = T),
-               sign_trend = ifelse(lower95 > 0 | upper95 < 0, 1, 0),
-               num_sims = sum(!is.na(rep1)),
-               num_boots_sing = sum(isSingular, na.rm = T),
-                         .groups = 'drop')
-
-    }) # end of sim_full
+      mutate(pwr_rep = reps)
+  })
 
   # calculate power
-  power_calc <- sim_full %>%
+  power_calc <- sim_mod %>%
     group_by(effect_size, sample_size) %>%
-    summarize(power_pct = sum(sign_trend, na.rm = T)/num_reps * 100,
-              mean_est = mean(est, na.rm = T),
+    summarize(power_pct = sum(signif, na.rm = T)/sum(!is.na(pwr_rep)) * 100,
+              #num_boots instead of num_reps in case some boots fail to return results
+              mean_est = mean(estimate, na.rm = T),
               num_years = length(years),
               lower95 = mean(lower95, na.rm = T),
               upper95 = mean(upper95, na.rm = T),
-              num_reps = num_reps,
-              pct_singular = sum(num_boots_sing)/(num_reps*num_reps),
+              num_boots = first(num_reps),
               .groups = 'drop')
 
+  # clean up columns
   power_calc$effect_size <- as.numeric(
     paste0(ifelse(grepl("dec", power_calc$effect_size), "-", ""),
-      gsub("ysim_dec", "",
-      gsub("ysim_inc", "",
-      power_calc$effect_size))))
+           gsub("ysim_dec", "",
+                gsub("ysim_inc", "",
+                     power_calc$effect_size))))
 
   power_final <- power_calc %>% arrange(effect_size, sample_size)
 
