@@ -39,6 +39,8 @@
 #' for the distribution. Otherwise leave blank.
 #' @param effect_size The range of effect sizes to test. The default is -50 to 50\%
 #' change at 5\% increments.
+#' @param pos_val TRUE (default) or FALSE. If TRUE, any simulated value that is negative
+#' will be converted to 0. If FALSE, negative simulated values will be allowed.
 #' @param sample_size The range of sample sizes to test. The default is 10 to 100
 #' in increments of 10.
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console,
@@ -48,7 +50,7 @@
 #' @examples
 #' \dontrun{
 #'
-#'  # Generate fake datasets
+#'  #--- Generate fake datasets
 #'  # sample data
 #'  site = paste0("site.", sprintf("\%02d", rep(1:30))) # vector of 30 site names
 #'  y = runif(30) # random data for 30 sites
@@ -70,16 +72,18 @@
 #'  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \%>\%
 #'    rename(samp1 = y1, samp2 = y2)
 #'
-#'  # Run function
+#'  #-- Run function
 #'  # Non-parametric sampling error
 #'  pwr_np <- forestTrends::power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
 #'              error_dist = 'nonpar', sampling_data = dat_qc_wide, num_reps = 100,
-#'              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
+#'              effect_size = seq(-20, 20, 5), pos_val = TRUE,
+#'              sample_size = c(10, 25, 50, 100))
 #'
-#'  # Normal sampling error
+#'  # Normal sampling error that allows negative simulated values
 #'  pwr_norm <- forestTrends::power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
 #'                error_dist = 'normal', sampling_sd = 0.2, num_reps = 100,
-#'                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100))
+#'                effect_size = seq(-20, 20, 5), pos_val = FALSE,
+#'                sample_size = c(10, 25, 50, 100))
 #' }
 #'
 #' @return A data frame that contains a row for every effect size and sample size
@@ -98,8 +102,9 @@
 power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                       random_type = c("intercept", "slope"),
                       num_reps = 100, error_dist = c("nonpar", 'normal'),
-                      sampling_data = NA, sampling_sd = NA, effect_size = seq(-50, 50, 5),
-                      sample_size = seq(10, 100, 10),  chatty = TRUE){
+                      sampling_data = NA, sampling_sd = NA,
+                      effect_size = seq(-50, 50, 5), pos_val = TRUE,
+                      sample_size = seq(10, 100, 10), chatty = TRUE){
 
   if(!requireNamespace("pdqr", quietly = TRUE)){
     stop("Package 'pdqr' needed for this function to work. Please install it.", call. = FALSE)

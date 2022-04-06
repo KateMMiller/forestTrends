@@ -14,6 +14,7 @@ case_boot_power(
   sampling_data = NA,
   sampling_sd = NA,
   effect_size = seq(-50, 50, 5),
+  pos_val = TRUE,
   sample_size = seq(10, 100, 10),
   num_reps = 100,
   chatty = TRUE
@@ -52,6 +53,9 @@ for the distribution. Otherwise leave blank.}
 \item{effect_size}{The range of effect sizes to test. The default is -50 to 50\%
 change at 5\% increments.}
 
+\item{pos_val}{TRUE (default) or FALSE. If TRUE, any simulated value that is negative
+will be converted to 0. If FALSE, negative simulated values will be allowed.}
+
 \item{sample_size}{The range of sample sizes to test. The default is 10 to 100
 in increments of 10.}
 
@@ -74,7 +78,7 @@ Only enabled for lmer(). Internal function used in power_sim().
 }
 \examples{
 \dontrun{
- ### Generate fake datasets
+ #--- Generate fake datasets
  # sample data
  site = paste0("site.", sprintf("\\%02d", rep(1:30))) # vector of 30 site names
  y = runif(30) # random data for 30 sites
@@ -96,15 +100,15 @@ Only enabled for lmer(). Internal function used in power_sim().
  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \\%>\\%
    rename(samp1 = y1, samp2 = y2)
 
- ### Run function
+ #--- Run function
  # Non-parametric sampling error
  sim_np <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
-             error_dist = 'nonpar', sampling_data = dat_qc_wide,
+             error_dist = 'nonpar', sampling_data = dat_qc_wide, pos_val = TRUE,
              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
 
- # Normal sampling error
+ # Normal sampling error allowing negative simulated values
  sim_norm <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
-               error_dist = 'normal', sampling_sd = 0.2,
+               error_dist = 'normal', sampling_sd = 0.2, pos_val = FALSE,
                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
 }
 
