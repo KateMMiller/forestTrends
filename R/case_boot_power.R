@@ -130,7 +130,6 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
       sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
       pdqr::new_r(c(abs(sampling_data$diff), -abs(sampling_data$diff)), type = 'continuous')
     } else {function(n){rnorm(n, 0, sampling_sd)}} #need to specify # values to generate
-    if(var_hist == TRUE){hist(rvar(1e6))}
     }
 
   # If years don't start at 1, rescale start at 1
