@@ -14,8 +14,9 @@ case_boot_power(
   sampling_data = NA,
   sampling_sd = NA,
   effect_size = seq(-50, 50, 5),
-  pos_val = TRUE,
   sample_size = seq(10, 100, 10),
+  pos_val = TRUE,
+  upper_val = NA,
   num_reps = 100,
   chatty = TRUE
 )
@@ -51,13 +52,18 @@ the data. The samp2 column is the replicate sample of the site.}
 for the distribution. Otherwise leave blank.}
 
 \item{effect_size}{The range of effect sizes to test. The default is -50 to 50\%
-change at 5\% increments.}
+change at 5\% increments. Effect sizes represent the percent change per time step
+rather than change across the entire study. If 0 is included, the resulting power
+reflects the false positive rate.}
+
+\item{sample_size}{The range of sample sizes to test. The default is 10 to 100
+in increments of 10.}
 
 \item{pos_val}{TRUE (default) or FALSE. If TRUE, any simulated value that is negative
 will be converted to 0. If FALSE, negative simulated values will be allowed.}
 
-\item{sample_size}{The range of sample sizes to test. The default is 10 to 100
-in increments of 10.}
+\item{upper_val}{Use this to specify a ceiling to the data. For example, if data
+are percents and can't be greater than 1.0, then upper_val = 1. Otherwise leave blank.}
 
 \item{num_reps}{Number of replicate bootstraps to run for each level of effect and
 sample size. Default is 100 for faster testing. However, 500-1000 is the better number
@@ -80,7 +86,7 @@ Only enabled for lmer(). Internal function used in power_sim().
 \dontrun{
  #--- Generate fake datasets
  # sample data
- site = paste0("site.", sprintf("\\%02d", rep(1:30))) # vector of 30 site names
+ site = paste0("site.", sprintf("\%02d", rep(1:30))) # vector of 30 site names
  y = runif(30) # random data for 30 sites
  yq = y[1:10] + rnorm(10, mean = 0, sd = 0.2) # qaqc data for first 30 sites generated
    #  by y0 value plus random sampling error
@@ -97,7 +103,7 @@ Only enabled for lmer(). Internal function used in power_sim().
  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 
- dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \\%>\\%
+ dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \%>\%
    rename(samp1 = y1, samp2 = y2)
 
  #--- Run function

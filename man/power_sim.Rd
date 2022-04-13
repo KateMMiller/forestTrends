@@ -14,8 +14,10 @@ power_sim(
   error_dist = c("nonpar", "normal"),
   sampling_data = NA,
   sampling_sd = NA,
+  var_hist = FALSE,
   effect_size = seq(-50, 50, 5),
   pos_val = TRUE,
+  upper_val = NA,
   sample_size = seq(10, 100, 10),
   chatty = TRUE
 )
@@ -56,11 +58,19 @@ the first sample of the data. The samp2 column is the replicate sample of the si
 \item{sampling_sd}{If error_dist = 'normal', must specify the standard deviation
 for the distribution. Otherwise leave blank.}
 
+\item{var_hist}{TRUE or FALSE. If TRUE, plots a histogram of 1e6 calls from the random
+variance function. If FALSE (default) doesn't plot anything.}
+
 \item{effect_size}{The range of effect sizes to test. The default is -50 to 50\%
-change at 5\% increments.}
+change at 5\% increments. Effect sizes represent the percent change per time step
+rather than change across the entire study. If 0 is included, the resulting power
+reflects the false positive rate.}
 
 \item{pos_val}{TRUE (default) or FALSE. If TRUE, any simulated value that is negative
 will be converted to 0. If FALSE, negative simulated values will be allowed.}
+
+\item{upper_val}{Use this to specify a ceiling to the data. For example, if data
+are percents and can't be greater than 1.0, then upper_val = 1. Otherwise leave blank.}
 
 \item{sample_size}{The range of sample sizes to test. The default is 10 to 100
 in increments of 10.}
@@ -92,7 +102,7 @@ intervals for each combination across the replicate bootstraps.
 
  #--- Generate fake datasets
  # sample data
- site = paste0("site.", sprintf("\\%02d", rep(1:30))) # vector of 30 site names
+ site = paste0("site.", sprintf("\%02d", rep(1:30))) # vector of 30 site names
  y = runif(30) # random data for 30 sites
  yq = y[1:10] + rnorm(10, mean = 0, sd = 0.2) # qaqc data for first 30 sites generated
    #  by y0 value plus random sampling error
@@ -109,20 +119,20 @@ intervals for each combination across the replicate bootstraps.
  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 
- dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \\%>\\%
+ dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \%>\%
    rename(samp1 = y1, samp2 = y2)
 
  #-- Run function
  # Non-parametric sampling error
  pwr_np <- forestTrends::power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
              error_dist = 'nonpar', sampling_data = dat_qc_wide, num_reps = 100,
-             effect_size = seq(-20, 20, 5), pos_val = TRUE,
+             effect_size = seq(-20, 20, 5), pos_val = TRUE, var_hist = TRUE,
              sample_size = c(10, 25, 50, 100))
 
  # Normal sampling error that allows negative simulated values
  pwr_norm <- forestTrends::power_sim(dat, y = 'y', ID = 'site', random_type = 'intercept',
                error_dist = 'normal', sampling_sd = 0.2, num_reps = 100,
-               effect_size = seq(-20, 20, 5), pos_val = FALSE,
+               effect_size = seq(-20, 20, 5), pos_val = FALSE, var_hist = TRUE,
                sample_size = c(10, 25, 50, 100))
 }
 

@@ -39,9 +39,13 @@
 #' @param sampling_sd If error_dist = 'normal', must specify the standard deviation
 #' for the distribution. Otherwise leave blank.
 #' @param effect_size The range of effect sizes to test. The default is -50 to 50\%
-#' change at 5\% increments.
+#' change at 5\% increments. Effect sizes represent the percent change per time step
+#' rather than change across the entire study. If 0 is included, the resulting power
+#' reflects the false positive rate.
 #' @param pos_val TRUE (default) or FALSE. If TRUE, any simulated value that is negative
 #' will be converted to 0. If FALSE, negative simulated values will be allowed.
+#' @param upper_val Use this to specify a ceiling to the data. For example, if data
+#' are percents and can't be greater than 1.0, then upper_val = 1. Otherwise leave blank.
 #' @param sample_size The range of sample sizes to test. The default is 10 to 100
 #' in increments of 10.
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console,
@@ -52,7 +56,7 @@
 #' \dontrun{
 #'  #--- Generate fake datasets
 #'  # sample data
-#'  site = paste0("site.", sprintf("\%02d", rep(1:30))) # vector of 30 site names
+#'  site = paste0("site.", sprintf("%02d", rep(1:30))) # vector of 30 site names
 #'  y = runif(30) # random data for 30 sites
 #'  yq = y[1:10] + rnorm(10, mean = 0, sd = 0.2) # qaqc data for first 30 sites generated
 #'    #  by y0 value plus random sampling error
@@ -69,7 +73,7 @@
 #'  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
 #'  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 #'
-#'  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \%>\%
+#'  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) %>%
 #'    rename(samp1 = y1, samp2 = y2)
 #'
 #'  #--- Run function
@@ -93,26 +97,29 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                             random_type = c("intercept", "slope"),
                             error_dist = c("nonpar", 'normal'),
                             sampling_data = NA, sampling_sd = NA,
-                            effect_size = seq(-50, 50, 5),  pos_val = TRUE,
-                            sample_size = seq(10, 100, 10),
+                            effect_size = seq(-50, 50, 5), sample_size = seq(10, 100, 10),
+                            pos_val = TRUE, upper_val = NA,
                             num_reps = 100, chatty = TRUE){
 
   if(!requireNamespace("pdqr", quietly = TRUE)){
     stop("Package 'pdqr' needed for this function to work. Please install it.", call. = FALSE)
   }
   if(is.null(data)){stop("Must specify data to run function")}
-  stopifnot(is.data.frame(data))
+  stopifnot("data.frame" %in% class(data))
   stopifnot(is.na(sampling_data) | is.data.frame(sampling_data))
-  if(is.null(y)){stop("Must specify y variable to run function")}
+  if(is.na(y)){stop("Must specify y variable to run function")}
   if(!is.na(sampling_data) && !c("samp1", "samp2") %in% names(sampling_data)){
     stop("The data.frame specified in sampling_data does not contain the required columns 'samp1' and 'samp2'")}
-  stopifnot(all(is.numeric(years)))
-  if(is.null(ID)){stop("Must specify ID variable to run function")}
+  stopifnot(all(is.numeric(years) & !is.na(years)))
+  stopifnot(all(is.numeric(sample_size) & !is.na(sample_size)))
+  stopifnot(all(is.numeric(effect_size) & !is.na(effect_size)))
+  if(is.na(ID)){stop("Must specify ID variable to run function")}
   stopifnot(c(y, ID) %in% names(data))
   error_dist <- match.arg(error_dist)
+  stopifnot(is.numeric(upper_val) | is.na(upper_val))
 
-  sample_num <- ifelse(exists("sample_num"), sample_num, 1) # for case_boot_lmer()
-
+  # sample_num <- ifelse(exists("sample_num"), sample_num, 1) # for case_boot_lmer()
+  #effect_size <- effect_size[effect_size != 0]
   # For error_dist = nonpar, create new distribution for sampling error
   # This is actually performed in the power_sim() function, so it's only
   # generated once, instead of for each bootstrap, but I left it here
@@ -121,89 +128,107 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   if(!exists('rvar')){
     rvar <- if(error_dist == 'nonpar'){
       sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
-      pdqr::new_r(sampling_data$diff, type = 'continuous')
-    } else {rnorm(0, sampling_sd)}
-  }
+      pdqr::new_r(c(abs(sampling_data$diff), -abs(sampling_data$diff)), type = 'continuous')
+    } else {function(n){rnorm(n, 0, sampling_sd)}} #need to specify # values to generate
+    if(var_hist == TRUE){hist(rvar(1e6))}
+    }
 
   # If years don't start at 1, rescale start at 1
   if(min(years) > 1){years <- years - min(years) + 1}
 
   # Set up bootstrap
   plots <- data.frame(ID = unique(data[,ID]))
-  colnames(plots) <- "ID" # bug handling for purrr::map
+  #colnames(plots) <- "ID" # bug handling for purrr::map
   n <- nrow(plots) # for strpad
   data$ID <- data[,ID]
   data <- data %>% select(ID, y) %>% mutate(year = 1)
 
-  samp <-
-    map_dfr(sample_size, function(x){
-      data.frame(ID = sample(plots$ID, x, replace = TRUE)) %>%
-        mutate(sample_size = x)}
-    )
+  # Sample dataset with replacement to be the maximum sample size. This will be sliced by the smaller
+  # sample sizes later to improve performance.
+  samp_max <- slice_sample(data, n = max(sample_size, na.rm = T), replace = T)
 
   # Set up unique naming column, so plots selected more than once have a unique ID.
-  samp$case <- as.factor(stringr::str_pad(rownames(samp), nchar(n), side ="left", pad = 0))
-
-  # Make sure nested variable in random effects is included in data_samp
-  data_samp <- dplyr::left_join(samp, data, by = "ID")
+  samp_max$case <- as.factor(stringr::str_pad(rownames(samp_max), nchar(n), side ="left", pad = 0))
+  samp_max$sample_size <- max(sample_size, na.rm = T)
 
   # Prepare vectors to iterate over
   sim_cols <- c(paste0("ysim", years[-1]))
+
   es_cols <- paste0("ysim",
-                    ifelse(effect_size < 0, "_dec", "_inc"),
+                    ifelse(effect_size < 0, "_dec",
+                           ifelse(effect_size > 0, "_inc", "_")), #nested ifelse faster than case_when
                     abs(effect_size))
 
   sim_mat <- expand.grid(sample_size = sample_size, effect_size = es_cols,
                          stringsAsFactors = F) %>% data.frame()
 
   # Build full wide dataset with years and number of samples for the for loop on simcols
-  data_sim <- data_samp
+  data_sim <- samp_max #data_samp
   data_sim[, sim_cols] <- as.numeric(NA_real_)
+  data_sim <- data_sim %>% #mutate(ysim1 = y) %>%
+    select(ID, year, case, sample_size, ysim1 = y, everything())
 
   # Build long-version of data_sim to bind simulated columns to at end of for loop
-  data_sim_long <- data_sim %>% select(-year) %>% rename(ysim1 = y) %>%
+  # tried fill instead, but it's slower than this approach
+  data_sim_long <- data_sim %>% select(-year) %>%
     pivot_longer(cols = -c(ID, sample_size, case),
                  names_to = "year",
                  values_to = "y") %>%
-    mutate(year = as.numeric(substr(year, 5, 5))) %>%
-    select(-y) %>%
-    right_join(., data_sim %>% select(ID, sample_size, case, y),
-               by = c("ID", "sample_size", "case"))
+    mutate(year = as.numeric(substr(year, 5, 7))) %>% # up to 3 digit number of years
+    right_join(., data_sim %>% select(ID, sample_size, case, ysim1),
+               by = c("ID", "sample_size", "case")) %>% select(-y)
 
   # Nested for loop creates a dataframe that includes a column for each effect size, and simulates
   # trends by using the previous years trend, rather than time = 0 trend.
+
   for(es in effect_size){
     escol = paste0("ysim",
-                   ifelse(es < 0, "_dec", "_inc"),
+                   ifelse(es < 0, "_dec",
+                          ifelse(es > 0, "_inc", "_")),
                    abs(es))
+
+    linear_pred <- data_sim$ysim1 * (es/100)
 
     for(col in sim_cols){ # Vectorized approach to simulating consecutive trends based on previous year
       prevcol = which(names(data_sim) == col) - 1
 
       data_sim[, col] <- data_sim[, prevcol] +
-        (data_sim[,prevcol] * (es/100)) + rvar(nrow(data_sim))
+        linear_pred + rvar(nrow(data_sim))}
 
-      es_dat <- data_sim %>% select(-year) %>% mutate(ysim1 = y) %>%
-        pivot_longer(cols = c(ysim1, all_of(sim_cols)),
-                     names_to = "year",
-                     values_to = all_of(escol)) %>%
-        mutate(year = as.numeric(substr(year, 5, 5))) %>%
-        select(all_of(escol))
+    es_dat <- data_sim %>% select(-year) %>% #mutate(ysim1 = y) %>%
+      pivot_longer(cols = c(ysim1, all_of(sim_cols)),
+                   names_to = "year",
+                   values_to = all_of(escol)) %>%
+      mutate(year = as.numeric(substr(year, 5, 5))) %>%
+      select(all_of(escol))
 
-      data_sim_long[, escol] <- es_dat
-
-    }
+    data_sim_long[, escol] <- es_dat
   }
+
 
   # Convert negative sim values to 0 if specified
   if(pos_val == TRUE){
     data_sim_long[,es_cols][data_sim_long[,es_cols] < 0] <- 0
   }
 
+  if(!is.na(upper_val)){
+    data_sim_long[,es_cols][data_sim_long[,es_cols] > upper_val] <- upper_val
+  }
+
+  # rbind slices dataset with nrow = max(sample_size) into smaller sample sizes
+  sample_size_slices <- sample_size[sample_size < (max(sample_size))]
+
+  full_dat <- rbind(data_sim_long,
+                    map_dfr(sample_size_slices, function(n){
+                      case_list <- unique(sort(data_sim_long$case))[1:n] %>% droplevels()
+                      data_slice <- data_sim_long %>% filter(case %in% case_list) %>%
+                        mutate(sample_size = n)})
+  )
+
   # Run case bootstrap to determine if there's a significant trend for each n x es comb.
   boot_mod <- map2_dfr(sim_mat[,1], sim_mat[,2],
                        function(sampsize, resp){
-                         ss_dat <- data_sim_long %>% filter(sample_size == sampsize) %>%
+                         ss_dat <- full_dat %>% filter(sample_size == sampsize) %>%
                            select(case, sample_size, year, all_of(resp))
 
                          iter <- as.numeric(rownames(sim_mat[sim_mat$sample_size == sampsize &
@@ -215,7 +240,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
                          mod <- case_boot_lmer(ss_dat, x = 'year', y = resp, ID = 'case',
                                                num_reps = num_reps, random_type = random_type,
-                                               chatty = F)
+                                               chatty = FALSE)
                          mod2 <- mod %>% filter(term == "Slope") %>%
                            mutate(sample_size = sampsize,
                                   effect_size = resp,
@@ -223,7 +248,5 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                        })
 
   return(data.frame(boot_mod))
-
-
 }
 
