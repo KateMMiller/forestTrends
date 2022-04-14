@@ -112,8 +112,8 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                       effect_size = seq(-50, 50, 5), pos_val = TRUE, upper_val = NA,
                       sample_size = seq(10, 100, 10), chatty = TRUE){
 
-  if(!requireNamespace("pdqr", quietly = TRUE)){
-    stop("Package 'pdqr' needed for this function to work. Please install it.", call. = FALSE)
+  if(!requireNamespace("fishmethods", quietly = TRUE)){
+    stop("Package 'fishmethods' needed for this function to work. Please install it.", call. = FALSE)
   }
   if(is.null(data)){stop("Must specify data to run function")}
   stopifnot("data.frame" %in% class(data))
@@ -139,11 +139,12 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   # QAQC data often has bias in 2nd sample, so function randomly assigns sign to
   # remove bias.
   rvar <- if(error_dist == 'nonpar'){
-    sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
-    pdqr::new_r(c(abs(sampling_data$diff), -abs(sampling_data$diff)), type = 'continuous')
+    sampling_data$diff <- abs(sampling_data$samp1 - sampling_data$samp2)
+    function(n){fishmethods::remp(n, c(sampling_data$diff, -sampling_data$diff))}
   } else {function(n){rnorm(n, 0, sampling_sd)}}
 
-  if(var_hist == TRUE){hist(rvar(1e6), main = "Histogram of error function")}
+  if(var_hist == TRUE){hist(rvar(1e5), main = "Histogram of error function")}
+  # code is considerably slower for 1e6
 
   # First, sample the data, simulate trends, and determine if significant
   # using case_boot_power. Repeat process num_reps number of times

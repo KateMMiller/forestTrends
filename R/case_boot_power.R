@@ -101,8 +101,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                             pos_val = TRUE, upper_val = NA,
                             num_reps = 100, chatty = TRUE){
 
-  if(!requireNamespace("pdqr", quietly = TRUE)){
-    stop("Package 'pdqr' needed for this function to work. Please install it.", call. = FALSE)
+  if(!requireNamespace("fishmethods", quietly = TRUE)){
+    stop("Package 'fishmethods' needed for this function to work. Please install it.", call. = FALSE)
   }
   if(is.null(data)){stop("Must specify data to run function")}
   stopifnot("data.frame" %in% class(data))
@@ -127,8 +127,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
   if(!exists('rvar')){
     rvar <- if(error_dist == 'nonpar'){
-      sampling_data$diff <- sampling_data$samp1 - sampling_data$samp2
-      pdqr::new_r(c(abs(sampling_data$diff), -abs(sampling_data$diff)), type = 'continuous')
+      sampling_data$diff <- abs(sampling_data$samp1 - sampling_data$samp2)
+      function(n){fishmethods::remp(n, c(sampling_data$diff, -sampling_data$diff))}
     } else {function(n){rnorm(n, 0, sampling_sd)}} #need to specify # values to generate
     }
 
@@ -243,7 +243,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                          mod2 <- mod %>% filter(term == "Slope") %>%
                            mutate(sample_size = sampsize,
                                   effect_size = resp,
-                                  signif = ifelse(lower95 > 0 | upper95 < 0, 1, 0))
+                                  signif = ifelse(round(lower95, 4) > 0 | round(upper95, 4) < 0, 1, 0))
                        })
 
   return(data.frame(boot_mod))
