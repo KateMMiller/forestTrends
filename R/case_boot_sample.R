@@ -105,10 +105,10 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
         dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
     }
 
-  #chatty <- ifelse(exists("chatty"), chatty, TRUE)
+  chatty <- ifelse(exists("chatty"), chatty, FALSE)
   sample_num <- ifelse(exists("sample_num"), sample_num, 1)
 
-  #if(chatty == TRUE & (sample_num %% 10) == 0){cat(".")} #prints tick every 10 reps
+  if(chatty == TRUE & (sample_num %% 10) == 0){cat(".")} #prints tick every 10 reps
 
   return(mod)
 }
