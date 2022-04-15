@@ -4,8 +4,7 @@
 #'
 #' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 #' response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.
-#' @param xlab Quoted title for x axis.
-#' @param ylab Quoted title for y axis.
+#' @param ylabel Quoted title for y axis.
 #' @param order Quoted column plot will sort by if specified.
 #' @param group Group to color code by. If not specified, all points and lines will be black. If "Network" is specified,
 #' then points and lines will be color coded by network, where ERMN is blue, MIDN is orange, NCRN is yellow, and NETN is green.
