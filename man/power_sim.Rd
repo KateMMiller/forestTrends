@@ -11,6 +11,7 @@ power_sim(
   ID = "Plot_Name",
   random_type = c("intercept", "slope"),
   num_reps = 100,
+  num_pwr_reps = 100,
   error_dist = c("nonpar", "normal"),
   sampling_data = NA,
   sampling_sd = NA,
@@ -19,7 +20,8 @@ power_sim(
   pos_val = TRUE,
   upper_val = NA,
   sample_size = seq(10, 100, 10),
-  chatty = TRUE
+  chatty = TRUE,
+  parallel = TRUE
 )
 }
 \arguments{
@@ -42,6 +44,10 @@ with (1 + year|ID) as the random component.}
 \item{num_reps}{Number of replicate bootstraps to run for each level of effect
 and sample size. Default is 100 for faster testing. However, 500-1000 is the
 better number for real analyses (note this could take many hours).}
+
+\item{num_pwr_reps}{Number of replicates to run for each level of effect
+and sample size to calculate power. Default is 100 for faster testing.
+However, 250+ is the better number for real analyses (note this could take many hours).}
 
 \item{error_dist}{Either "nonpar" or "normal". If nonpar is chosen, must specify
 a dataset of repeated measures, like from QA/QC sampling, to generate an error
@@ -78,6 +84,9 @@ in increments of 10.}
 \item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console,
 including the number of the power sample currently running and a tick for every
 replicate within the power bootstrap. FALSE will not print progress in console.}
+
+\item{parallel}{TRUE or FALSE. If TRUE, power simulation will use parallel
+processing across the machine's total number of cores.}
 }
 \value{
 A data frame that contains a row for every effect size and sample size

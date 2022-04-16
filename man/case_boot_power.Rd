@@ -18,7 +18,8 @@ case_boot_power(
   pos_val = TRUE,
   upper_val = NA,
   num_reps = 100,
-  chatty = TRUE
+  chatty = TRUE,
+  parallel = TRUE
 )
 }
 \arguments{
@@ -72,6 +73,9 @@ for real analyses (note this could take many hours).}
 \item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console,
 including the number of the power sample currently running and a tick for every
 replicate within the power bootstrap. FALSE will not print progress in console.}
+
+\item{parallel}{TRUE or FALSE. If TRUE, power simulation will use parallel
+processing across the machine's total number of cores.}
 }
 \value{
 a data.frame with simulated trends

@@ -7,12 +7,12 @@
 #' the specified effect, sample sizes and number of bootstraps specified by num_reps.
 #' Only enabled for lmer(). Internal function used in power_sim().
 #'
-#' @importFrom dplyr filter left_join mutate right_join select
-#' @importFrom purrr map_dfr map2_dfr
+#' @importFrom dplyr filter left_join mutate right_join select slice_sample
 #' @importFrom magrittr %>%
 #' @importFrom stringr str_pad
 #' @importFrom tidyselect all_of
 #' @importFrom tidyr pivot_longer
+#' @importFrom purrr map_dfr
 #'
 #' @param data Data frame containing an ID column that identifies each sample unit
 #' (e.g., Plot_Name), and at least one #' column with a response variable.
@@ -51,6 +51,8 @@
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console,
 #' including the number of the power sample currently running and a tick for every
 #' replicate within the power bootstrap. FALSE will not print progress in console.
+#' @param parallel TRUE or FALSE. If TRUE, power simulation will use parallel
+#' processing across the machine's total number of cores.
 #'
 #' @examples
 #' \dontrun{
@@ -99,11 +101,20 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                             sampling_data = NA, sampling_sd = NA,
                             effect_size = seq(-50, 50, 5), sample_size = seq(10, 100, 10),
                             pos_val = TRUE, upper_val = NA,
-                            num_reps = 100, chatty = TRUE){
+                            num_reps = 100, chatty = TRUE, parallel = TRUE){
 
   if(!requireNamespace("fishmethods", quietly = TRUE)){
     stop("Package 'fishmethods' needed for this function to work. Please install it.", call. = FALSE)
   }
+
+  if(!requireNamespace("furrr", quietly = TRUE)){
+    stop("Package 'furrr' needed for this function to work. Please install it.", call. = FALSE)
+  }
+
+  if(!requireNamespace("future", quietly = TRUE)){
+    stop("Package 'future' needed for this function to work. Please install it.", call. = FALSE)
+  }
+
   if(is.null(data)){stop("Must specify data to run function")}
   stopifnot("data.frame" %in% class(data))
   stopifnot(is.na(sampling_data) | is.data.frame(sampling_data))
@@ -180,6 +191,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   # Nested for loop creates a dataframe that includes a column for each effect size, and simulates
   # trends by using the previous years trend, rather than time = 0 trend.
 
+  es <- effect_size[1]
+  col = sim_cols[1]
   for(es in effect_size){
     escol = paste0("ysim",
                    ifelse(es < 0, "_dec",
@@ -192,7 +205,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
       prevcol = which(names(data_sim) == col) - 1
 
       data_sim[, col] <- data_sim[, prevcol] +
-        linear_pred + rvar(nrow(data_sim))}
+        linear_pred + rvar(nrow(data_sim))
+      }
 
     es_dat <- data_sim %>% select(-year) %>% #mutate(ysim1 = y) %>%
       pivot_longer(cols = c(ysim1, all_of(sim_cols)),
@@ -217,6 +231,10 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   # rbind slices dataset with nrow = max(sample_size) into smaller sample sizes
   sample_size_slices <- sample_size[sample_size < (max(sample_size))]
 
+  if(parallel == TRUE){future::plan(future::multisession, gc = TRUE,
+                                    workers = future::availableCores())
+  }
+
   full_dat <- rbind(data_sim_long,
                     map_dfr(sample_size_slices, function(n){
                       case_list <- unique(sort(data_sim_long$case))[1:n] %>% droplevels()
@@ -225,7 +243,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   )
 
   # Run case bootstrap to determine if there's a significant trend for each n x es comb.
-  boot_mod <- map2_dfr(sim_mat[,1], sim_mat[,2],
+  boot_mod <- furrr::future_map2_dfr(sim_mat[,1], sim_mat[,2], .id = 'boot', #.progress = TRUE,
+                                     .options = furrr::furrr_options(seed = TRUE),
                        function(sampsize, resp){
                          ss_dat <- full_dat %>% filter(sample_size == sampsize) %>%
                            select(case, sample_size, year, all_of(resp))
@@ -240,6 +259,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                          mod <- case_boot_lmer(ss_dat, x = 'year', y = resp, ID = 'case',
                                                num_reps = num_reps, random_type = random_type,
                                                chatty = FALSE)
+
                          mod2 <- mod %>% filter(term == "Slope") %>%
                            mutate(sample_size = sampsize,
                                   effect_size = resp,
