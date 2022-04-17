@@ -175,8 +175,7 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                         sampling_data = sampling_data,
                         sampling_sd = sampling_sd,
                         pos_val = pos_val,
-                        upper_val = upper_val,
-                        chatty = chatty) %>%
+                        upper_val = upper_val) %>%
         mutate(pwr_rep = reps)
   })
 
