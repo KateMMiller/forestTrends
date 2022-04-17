@@ -12,7 +12,7 @@
 #' @importFrom stringr str_pad
 #' @importFrom tidyselect all_of
 #' @importFrom tidyr pivot_longer
-#' @importFrom purrr map_dfr
+#' @importFrom purrr map_dfr map2_dfr
 #'
 #' @param data Data frame containing an ID column that identifies each sample unit
 #' (e.g., Plot_Name), and at least one #' column with a response variable.
@@ -48,11 +48,6 @@
 #' are percents and can't be greater than 1.0, then upper_val = 1. Otherwise leave blank.
 #' @param sample_size The range of sample sizes to test. The default is 10 to 100
 #' in increments of 10.
-#' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console,
-#' including the number of the power sample currently running and a tick for every
-#' replicate within the power bootstrap. FALSE will not print progress in console.
-#' @param parallel TRUE or FALSE. If TRUE, power simulation will use parallel
-#' processing across the machine's total number of cores.
 #'
 #' @examples
 #' \dontrun{
@@ -101,18 +96,11 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                             sampling_data = NA, sampling_sd = NA,
                             effect_size = seq(-50, 50, 5), sample_size = seq(10, 100, 10),
                             pos_val = TRUE, upper_val = NA,
-                            num_reps = 100, chatty = TRUE, parallel = TRUE){
+                            num_reps = 100#, chatty = TRUE
+                            ){
 
   if(!requireNamespace("fishmethods", quietly = TRUE)){
     stop("Package 'fishmethods' needed for this function to work. Please install it.", call. = FALSE)
-  }
-
-  if(!requireNamespace("furrr", quietly = TRUE)){
-    stop("Package 'furrr' needed for this function to work. Please install it.", call. = FALSE)
-  }
-
-  if(!requireNamespace("future", quietly = TRUE)){
-    stop("Package 'future' needed for this function to work. Please install it.", call. = FALSE)
   }
 
   if(is.null(data)){stop("Must specify data to run function")}
@@ -231,9 +219,10 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   # rbind slices dataset with nrow = max(sample_size) into smaller sample sizes
   sample_size_slices <- sample_size[sample_size < (max(sample_size))]
 
-  if(parallel == TRUE){future::plan(future::multisession, gc = TRUE,
-                                    workers = future::availableCores())
-  }
+  # if(parallel == TRUE){
+  #   num_workers <- as.numeric(length(future::availableWorkers()) - 2)
+  #   future::plan(future::multisession, gc = TRUE, workers = num_workers)
+  # }
 
   full_dat <- rbind(data_sim_long,
                     map_dfr(sample_size_slices, function(n){
@@ -243,8 +232,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   )
 
   # Run case bootstrap to determine if there's a significant trend for each n x es comb.
-  boot_mod <- furrr::future_map2_dfr(sim_mat[,1], sim_mat[,2], .id = 'boot', #.progress = TRUE,
-                                     .options = furrr::furrr_options(seed = TRUE),
+  boot_mod <- map2_dfr(sim_mat[,1], sim_mat[,2], .id = 'boot', #.progress = chatty,
+              #                       .options = furrr::furrr_options(seed = TRUE),
                        function(sampsize, resp){
                          ss_dat <- full_dat %>% filter(sample_size == sampsize) %>%
                            select(case, sample_size, year, all_of(resp))
@@ -252,8 +241,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                          iter <- as.numeric(rownames(sim_mat[sim_mat$sample_size == sampsize &
                                                                sim_mat$effect_size == resp,]))
 
-                         if(chatty == TRUE & iter %% 5 == 1){cat(".")} #tick every 5th sim comb
-                         if(chatty == TRUE & iter == nrow(sim_mat)){cat(".Done", "\n")}
+                         # if(chatty == TRUE & iter %% 5 == 1){cat(".")} #tick every 5th sim comb
+                         # if(chatty == TRUE & iter == nrow(sim_mat)){cat(".Done", "\n")}
 
 
                          mod <- case_boot_lmer(ss_dat, x = 'year', y = resp, ID = 'case',
