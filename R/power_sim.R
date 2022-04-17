@@ -55,7 +55,7 @@
 #' including the number of the power sample currently running and a tick for every
 #' replicate within the power bootstrap. FALSE will not print progress in console.
 #' @param parallel TRUE or FALSE. If TRUE, power simulation will use parallel
-#' processing across the machine's total number of cores.
+#' processing across all but two of the machine's total number of cores.
 #' @examples
 #' \dontrun{
 #'
@@ -136,7 +136,7 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   #effect_size <- effect_size[effect_size != 0]
 
   sample_num <- ifelse(exists("sample_num"), sample_num, 1) # for case_boot_lmer()
-  if(chatty == TRUE){cat("Running power simulations:", "\n")}
+  if(chatty == TRUE){cat("Splitting tasks across cores", "\n")}
 
   # For error_dist = nonpar, create new distribution for sampling error
   # QAQC data often has bias in 2nd sample, so function randomly assigns sign to
@@ -153,15 +153,18 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   # using case_boot_power. Repeat process num_reps number of times
   # to calculate power as the percent of tests that were significant.
 
-  if(parallel == TRUE){future::plan(future::multisession, gc = TRUE,
-                                    workers = future::availableCores())
+  if(parallel == TRUE){
+    num_workers <- as.numeric(length(future::availableWorkers()) - 2)
+    future::plan(future::multisession, gc = TRUE,
+                                    workers = num_workers)
   }
 
   sim_mod <- furrr::future_map_dfr(seq_len(num_pwr_reps),
                #.id = 'pwr_rep',
                .options = furrr::furrr_options(seed = TRUE),
+               .progress = chatty,
     function(reps){
-      if(chatty == TRUE){cat(reps, "out of", num_pwr_reps)}
+      #if(chatty == TRUE){cat(reps, "out of", num_pwr_reps)}
 
         case_boot_power(data, y = y, years = years, ID = ID,
                         random_type = random_type,
@@ -173,7 +176,7 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                         sampling_sd = sampling_sd,
                         pos_val = pos_val,
                         upper_val = upper_val,
-                        parallel = parallel) %>%
+                        chatty = chatty) %>%
         mutate(pwr_rep = reps)
   })
 

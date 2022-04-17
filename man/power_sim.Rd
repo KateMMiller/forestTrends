@@ -86,7 +86,7 @@ including the number of the power sample currently running and a tick for every
 replicate within the power bootstrap. FALSE will not print progress in console.}
 
 \item{parallel}{TRUE or FALSE. If TRUE, power simulation will use parallel
-processing across the machine's total number of cores.}
+processing across all but two of the machine's total number of cores.}
 }
 \value{
 A data frame that contains a row for every effect size and sample size
