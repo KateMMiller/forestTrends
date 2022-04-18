@@ -136,13 +136,14 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   #effect_size <- effect_size[effect_size != 0]
 
   sample_num <- ifelse(exists("sample_num"), sample_num, 1) # for case_boot_lmer()
-  if(chatty == TRUE){cat("Splitting tasks across cores", "\n")}
+  if(chatty == TRUE){cat("Starting power simulation", "\n")}
 
-  # For error_dist = nonpar, create new distribution for sampling error
+  # For error_dist = nonpar, create new distribution for sampling error as a percentage
   # QAQC data often has bias in 2nd sample, so function randomly assigns sign to
   # remove bias.
   rvar <- if(error_dist == 'nonpar'){
-    sampling_data$diff <- abs(sampling_data$samp1 - sampling_data$samp2)
+    sampling_data$diff <- (abs(sampling_data$samp1 - sampling_data$samp2))/
+      ((sampling_data$samp1 + sampling_data$samp2)/2)
     function(n){fishmethods::remp(n, c(sampling_data$diff, -sampling_data$diff))}
   } else {function(n){rnorm(n, 0, sampling_sd)}}
 

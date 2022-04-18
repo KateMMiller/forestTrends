@@ -117,16 +117,15 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   error_dist <- match.arg(error_dist)
   stopifnot(is.numeric(upper_val) | is.na(upper_val))
 
-  # sample_num <- ifelse(exists("sample_num"), sample_num, 1) # for case_boot_lmer()
-  #effect_size <- effect_size[effect_size != 0]
-  # For error_dist = nonpar, create new distribution for sampling error
+  # For error_dist = nonpar, create new distribution for sampling error as a percentage.
   # This is actually performed in the power_sim() function, so it's only
   # generated once, instead of for each bootstrap, but I left it here
   # in case this function is being used without power_sim()
 
   if(!exists('rvar')){
     rvar <- if(error_dist == 'nonpar'){
-      sampling_data$diff <- abs(sampling_data$samp1 - sampling_data$samp2)
+      sampling_data$diff <- (abs(sampling_data$samp1 - sampling_data$samp2))/
+        ((sampling_data$samp1 + sampling_data$samp2)/2)
       function(n){fishmethods::remp(n, c(sampling_data$diff, -sampling_data$diff))}
     } else {function(n){rnorm(n, 0, sampling_sd)}} #need to specify # values to generate
     }
@@ -193,7 +192,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
       prevcol = which(names(data_sim) == col) - 1
 
       data_sim[, col] <- data_sim[, prevcol] +
-        linear_pred + rvar(nrow(data_sim))
+        linear_pred + rvar(nrow(data_sim))*data_sim[, prevcol] # error added as percent of prev. value
       }
 
     es_dat <- data_sim %>% select(-year) %>% #mutate(ysim1 = y) %>%
