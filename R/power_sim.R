@@ -56,6 +56,8 @@
 #' replicate within the power bootstrap. FALSE will not print progress in console.
 #' @param parallel TRUE or FALSE. If TRUE, power simulation will use parallel
 #' processing across all but two of the machine's total number of cores.
+#' @param return_sim TRUE or FALSE. If TRUE, assigns simulation dataset to global environment.
+#' This option is helpful for troubleshooting.
 #' @examples
 #' \dontrun{
 #'
@@ -113,7 +115,8 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                       num_reps = 100, num_pwr_reps = 100, error_dist = c("nonpar", 'normal'),
                       sampling_data = NA, sampling_sd = NA, var_hist = FALSE,
                       effect_size = seq(-50, 50, 5), pos_val = TRUE, upper_val = NA,
-                      sample_size = seq(10, 100, 10), chatty = TRUE, parallel = TRUE){
+                      sample_size = seq(10, 100, 10), chatty = TRUE, parallel = TRUE,
+                      return_sim = TRUE){
 
   if(!requireNamespace("fishmethods", quietly = TRUE)){
     stop("Package 'fishmethods' needed for this function to work. Please install it.", call. = FALSE)
@@ -193,6 +196,8 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                             effect_size > 0 & lower95 > 0 & signif == 1, 1, 0),
       false_pos = ifelse(effect_size == 0 & signif == 1, 1, 0))
 
+
+  if(return_sim == TRUE){assign("sim_df", sim_mod2, envir = .GlobalEnv)}
 
   # calculate power
   power_calc <- sim_mod2 %>%

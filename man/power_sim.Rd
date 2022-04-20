@@ -21,7 +21,8 @@ power_sim(
   upper_val = NA,
   sample_size = seq(10, 100, 10),
   chatty = TRUE,
-  parallel = TRUE
+  parallel = TRUE,
+  return_sim = TRUE
 )
 }
 \arguments{
@@ -87,6 +88,9 @@ replicate within the power bootstrap. FALSE will not print progress in console.}
 
 \item{parallel}{TRUE or FALSE. If TRUE, power simulation will use parallel
 processing across all but two of the machine's total number of cores.}
+
+\item{return_sim}{TRUE or FALSE. If TRUE, assigns simulation dataset to global environment.
+This option is helpful for troubleshooting.}
 }
 \value{
 A data frame that contains a row for every effect size and sample size
