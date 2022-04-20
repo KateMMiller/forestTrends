@@ -48,6 +48,8 @@
 #' are percents and can't be greater than 1.0, then upper_val = 1. Otherwise leave blank.
 #' @param sample_size The range of sample sizes to test. The default is 10 to 100
 #' in increments of 10.
+#' @param save_data TRUE or FALSE. If TRUE, writes the simulated data to the working directory.
+#' Helpful for troubleshooting.
 #'
 #' @examples
 #' \dontrun{
@@ -95,7 +97,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                             error_dist = c("nonpar", 'normal'),
                             sampling_data = NA, sampling_sd = NA,
                             effect_size = seq(-50, 50, 5), sample_size = seq(10, 100, 10),
-                            pos_val = TRUE, upper_val = NA,
+                            pos_val = TRUE, upper_val = NA, save_data = FALSE,
                             num_reps = 100#, chatty = TRUE
                             ){
 
@@ -191,8 +193,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
     for(col in sim_cols){ # Vectorized approach to simulating consecutive trends based on previous year
       prevcol = which(names(data_sim) == col) - 1
 
-      data_sim[, col] <- data_sim[, prevcol] +
-        linear_pred + rvar(nrow(data_sim))*data_sim[, prevcol] # error added as percent of prev. value
+      data_sim[, col] <- data_sim[, prevcol] + linear_pred +
+        (rvar(nrow(data_sim))/length(years))*data_sim[, prevcol] # error added as percent of prev. value/ # years
       }
 
     es_dat <- data_sim %>% select(-year) %>% #mutate(ysim1 = y) %>%
@@ -229,6 +231,10 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                       data_slice <- data_sim_long %>% filter(case %in% case_list) %>%
                         mutate(sample_size = n)})
   )
+
+  if(save_data == TRUE){write.csv(full_dat,
+                          paste0("simulated_dataset", y, "_",
+                                 error_dist, "_", random_type, ".csv"), row.names = F)}
 
   # Run case bootstrap to determine if there's a significant trend for each n x es comb.
   boot_mod <- map2_dfr(sim_mat[,1], sim_mat[,2], .id = 'boot', #.progress = chatty,
