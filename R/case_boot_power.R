@@ -179,9 +179,9 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
   # Nested for loop creates a dataframe that includes a column for each effect size, and simulates
   # trends by using the previous years trend, rather than time = 0 trend.
-
-  es <- effect_size[1]
-  col = sim_cols[1]
+#
+#    es <- effect_size[1]
+#    col = sim_cols[1]
   for(es in effect_size){
     escol = paste0("ysim",
                    ifelse(es < 0, "_dec",
@@ -193,8 +193,20 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
     for(col in sim_cols){ # Vectorized approach to simulating consecutive trends based on previous year
       prevcol = which(names(data_sim) == col) - 1
 
-      data_sim[, col] <- data_sim[, prevcol] + linear_pred +
-        (rvar(nrow(data_sim))/length(years))*data_sim[, prevcol] # error added as percent of prev. value/ # years
+      # data_sim[, col] <- data_sim[, prevcol] + linear_pred +
+      #   (rvar(nrow(data_sim))/length(years))*data_sim[, prevcol] # error added as percent of prev. value/ # years
+
+      data_sim[,col] <- (data_sim[, prevcol]+ linear_pred) * (1 + rvar(nrow(data_sim))/length(years))
+
+      # Convert negative sim values to 0 if specified
+      if(pos_val == TRUE){
+        data_sim[, col][data_sim[, col] < 0] <- 0
+      }
+
+      if(!is.na(upper_val)){
+        data_sim[, col][data_sim[, col] > upper_val] <- upper_val
+      }
+
       }
 
     es_dat <- data_sim %>% select(-year) %>% #mutate(ysim1 = y) %>%
@@ -208,22 +220,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   }
 
 
-  # Convert negative sim values to 0 if specified
-  if(pos_val == TRUE){
-    data_sim_long[,es_cols][data_sim_long[,es_cols] < 0] <- 0
-  }
-
-  if(!is.na(upper_val)){
-    data_sim_long[,es_cols][data_sim_long[,es_cols] > upper_val] <- upper_val
-  }
-
   # rbind slices dataset with nrow = max(sample_size) into smaller sample sizes
   sample_size_slices <- sample_size[sample_size < (max(sample_size))]
-
-  # if(parallel == TRUE){
-  #   num_workers <- as.numeric(length(future::availableWorkers()) - 2)
-  #   future::plan(future::multisession, gc = TRUE, workers = num_workers)
-  # }
 
   full_dat <- rbind(data_sim_long,
                     map_dfr(sample_size_slices, function(n){
@@ -245,10 +243,6 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
                          iter <- as.numeric(rownames(sim_mat[sim_mat$sample_size == sampsize &
                                                                sim_mat$effect_size == resp,]))
-
-                         # if(chatty == TRUE & iter %% 5 == 1){cat(".")} #tick every 5th sim comb
-                         # if(chatty == TRUE & iter == nrow(sim_mat)){cat(".Done", "\n")}
-
 
                          mod <- case_boot_lmer(ss_dat, x = 'year', y = resp, ID = 'case',
                                                num_reps = num_reps, random_type = random_type,
