@@ -121,6 +121,15 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   if(!requireNamespace("fishmethods", quietly = TRUE)){
     stop("Package 'fishmethods' needed for this function to work. Please install it.", call. = FALSE)
   }
+
+  if(!requireNamespace("furrr", quietly = TRUE)){
+    stop("Package 'furrr' needed for this function to work. Please install it.", call. = FALSE)
+  }
+
+  if(!requireNamespace("future", quietly = TRUE)){
+    stop("Package 'future' needed for this function to work. Please install it.", call. = FALSE)
+  }
+
   if(is.null(data)){stop("Must specify data to run function")}
   stopifnot("data.frame" %in% class(data))
   stopifnot(is.na(sampling_data) | is.data.frame(sampling_data))
