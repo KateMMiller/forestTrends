@@ -150,7 +150,7 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
     function(n){fishmethods::remp(n, c(sampling_data$diff, -sampling_data$diff))}
   } else {function(n){rnorm(n, 0, sampling_sd)}}
 
-  if(var_hist == TRUE){hist(rvar(1e5), main = "Histogram of error function")}
+  if(var_hist == TRUE){graphics::hist(rvar(1e5), main = "Histogram of error function")}
   # code is considerably slower for 1e6
 
   # First, sample the data, simulate trends, and determine if significant

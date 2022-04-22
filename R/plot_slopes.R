@@ -2,6 +2,8 @@
 #'
 #' @description Function plots the slopes from case_boot_lmer output
 #'
+#' @importFrom dplyr desc
+#'
 #' @param df Data frame containing a column called Plot_Name, a column called cycle, and a column with at least one
 #' response variable. If Unit_Code is in the data frame, then a facet by park will be plotted.
 #' @param ylabel Quoted title for y axis.

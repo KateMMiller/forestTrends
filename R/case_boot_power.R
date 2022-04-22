@@ -7,7 +7,7 @@
 #' the specified effect, sample sizes and number of bootstraps specified by num_reps.
 #' Only enabled for lmer(). Internal function used in power_sim().
 #'
-#' @importFrom dplyr filter left_join mutate right_join select slice_sample
+#' @importFrom dplyr everything filter left_join mutate right_join select slice_sample
 #' @importFrom magrittr %>%
 #' @importFrom stringr str_pad
 #' @importFrom tidyselect all_of
@@ -230,7 +230,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                         mutate(sample_size = n)})
   )
 
-  if(save_data == TRUE){write.csv(full_dat,
+  if(save_data == TRUE){utils::write.csv(full_dat,
                           paste0("simulated_dataset", y, "_",
                                  error_dist, "_", random_type, ".csv"), row.names = F)}
 
