@@ -33,6 +33,7 @@ Collate:
     'case_boot_lmer.R'
     'case_boot_loess.R'
     'case_boot_power.R'
+    'globals.R'
     'plot_slopes.R'
     'plot_trend_response.R'
     'power_sim.R'
