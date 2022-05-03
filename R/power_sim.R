@@ -37,7 +37,7 @@
 #' data should include a unique ID column that is specified via the ID argument,
 #' and two columns for each sample named samp1 and samp2. The samp1 column is
 #' the first sample of the data. The samp2 column is the replicate sample of the site.
-#' @param var_hist TRUE or FALSE. If TRUE, plots a histogram of 1e6 calls from the random
+#' @param var_hist TRUE or FALSE. If TRUE, plots a histogram of 1e5 calls from the random
 #' variance function. If FALSE (default) doesn't plot anything.
 #' @param sampling_sd If error_dist = 'normal', must specify the standard deviation
 #' for the distribution. Otherwise leave blank.

@@ -65,7 +65,7 @@ the first sample of the data. The samp2 column is the replicate sample of the si
 \item{sampling_sd}{If error_dist = 'normal', must specify the standard deviation
 for the distribution. Otherwise leave blank.}
 
-\item{var_hist}{TRUE or FALSE. If TRUE, plots a histogram of 1e6 calls from the random
+\item{var_hist}{TRUE or FALSE. If TRUE, plots a histogram of 1e5 calls from the random
 variance function. If FALSE (default) doesn't plot anything.}
 
 \item{effect_size}{The range of effect sizes to test. The default is -50 to 50\%
