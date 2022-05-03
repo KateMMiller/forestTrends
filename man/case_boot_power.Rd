@@ -17,8 +17,8 @@ case_boot_power(
   sample_size = seq(10, 100, 10),
   pos_val = TRUE,
   upper_val = NA,
-  num_reps = 100,
-  chatty = TRUE
+  save_data = FALSE,
+  num_reps = 100
 )
 }
 \arguments{
@@ -65,13 +65,12 @@ will be converted to 0. If FALSE, negative simulated values will be allowed.}
 \item{upper_val}{Use this to specify a ceiling to the data. For example, if data
 are percents and can't be greater than 1.0, then upper_val = 1. Otherwise leave blank.}
 
+\item{save_data}{TRUE or FALSE. If TRUE, writes the simulated data to the working directory.
+Helpful for troubleshooting.}
+
 \item{num_reps}{Number of replicate bootstraps to run for each level of effect and
 sample size. Default is 100 for faster testing. However, 500-1000 is the better number
 for real analyses (note this could take many hours).}
-
-\item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console,
-including the number of the power sample currently running and a tick for every
-replicate within the power bootstrap. FALSE will not print progress in console.}
 }
 \value{
 a data.frame with simulated trends

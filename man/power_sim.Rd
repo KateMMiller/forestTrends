@@ -11,6 +11,7 @@ power_sim(
   ID = "Plot_Name",
   random_type = c("intercept", "slope"),
   num_reps = 100,
+  num_pwr_reps = 100,
   error_dist = c("nonpar", "normal"),
   sampling_data = NA,
   sampling_sd = NA,
@@ -19,7 +20,9 @@ power_sim(
   pos_val = TRUE,
   upper_val = NA,
   sample_size = seq(10, 100, 10),
-  chatty = TRUE
+  chatty = TRUE,
+  parallel = TRUE,
+  return_sim = TRUE
 )
 }
 \arguments{
@@ -43,6 +46,10 @@ with (1 + year|ID) as the random component.}
 and sample size. Default is 100 for faster testing. However, 500-1000 is the
 better number for real analyses (note this could take many hours).}
 
+\item{num_pwr_reps}{Number of replicates to run for each level of effect
+and sample size to calculate power. Default is 100 for faster testing.
+However, 250+ is the better number for real analyses (note this could take many hours).}
+
 \item{error_dist}{Either "nonpar" or "normal". If nonpar is chosen, must specify
 a dataset of repeated measures, like from QA/QC sampling, to generate an error
 distribution based on the data. If normal is chosen, then a normal distribution
@@ -58,7 +65,7 @@ the first sample of the data. The samp2 column is the replicate sample of the si
 \item{sampling_sd}{If error_dist = 'normal', must specify the standard deviation
 for the distribution. Otherwise leave blank.}
 
-\item{var_hist}{TRUE or FALSE. If TRUE, plots a histogram of 1e6 calls from the random
+\item{var_hist}{TRUE or FALSE. If TRUE, plots a histogram of 1e5 calls from the random
 variance function. If FALSE (default) doesn't plot anything.}
 
 \item{effect_size}{The range of effect sizes to test. The default is -50 to 50\%
@@ -78,6 +85,12 @@ in increments of 10.}
 \item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console,
 including the number of the power sample currently running and a tick for every
 replicate within the power bootstrap. FALSE will not print progress in console.}
+
+\item{parallel}{TRUE or FALSE. If TRUE, power simulation will use parallel
+processing across all but two of the machine's total number of cores.}
+
+\item{return_sim}{TRUE or FALSE. If TRUE, assigns simulation dataset to global environment.
+This option is helpful for troubleshooting.}
 }
 \value{
 A data frame that contains a row for every effect size and sample size

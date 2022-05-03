@@ -7,12 +7,12 @@
 #' the specified effect, sample sizes and number of bootstraps specified by num_reps.
 #' Only enabled for lmer(). Internal function used in power_sim().
 #'
-#' @importFrom dplyr filter left_join mutate right_join select
-#' @importFrom purrr map_dfr map2_dfr
+#' @importFrom dplyr everything filter left_join mutate right_join select slice_sample
 #' @importFrom magrittr %>%
 #' @importFrom stringr str_pad
 #' @importFrom tidyselect all_of
 #' @importFrom tidyr pivot_longer
+#' @importFrom purrr map_dfr map2_dfr
 #'
 #' @param data Data frame containing an ID column that identifies each sample unit
 #' (e.g., Plot_Name), and at least one #' column with a response variable.
@@ -48,9 +48,8 @@
 #' are percents and can't be greater than 1.0, then upper_val = 1. Otherwise leave blank.
 #' @param sample_size The range of sample sizes to test. The default is 10 to 100
 #' in increments of 10.
-#' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console,
-#' including the number of the power sample currently running and a tick for every
-#' replicate within the power bootstrap. FALSE will not print progress in console.
+#' @param save_data TRUE or FALSE. If TRUE, writes the simulated data to the working directory.
+#' Helpful for troubleshooting.
 #'
 #' @examples
 #' \dontrun{
@@ -98,12 +97,14 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                             error_dist = c("nonpar", 'normal'),
                             sampling_data = NA, sampling_sd = NA,
                             effect_size = seq(-50, 50, 5), sample_size = seq(10, 100, 10),
-                            pos_val = TRUE, upper_val = NA,
-                            num_reps = 100, chatty = TRUE){
+                            pos_val = TRUE, upper_val = NA, save_data = FALSE,
+                            num_reps = 100#, chatty = TRUE
+                            ){
 
   if(!requireNamespace("fishmethods", quietly = TRUE)){
     stop("Package 'fishmethods' needed for this function to work. Please install it.", call. = FALSE)
   }
+
   if(is.null(data)){stop("Must specify data to run function")}
   stopifnot("data.frame" %in% class(data))
   stopifnot(is.na(sampling_data) | is.data.frame(sampling_data))
@@ -118,16 +119,15 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   error_dist <- match.arg(error_dist)
   stopifnot(is.numeric(upper_val) | is.na(upper_val))
 
-  # sample_num <- ifelse(exists("sample_num"), sample_num, 1) # for case_boot_lmer()
-  #effect_size <- effect_size[effect_size != 0]
-  # For error_dist = nonpar, create new distribution for sampling error
+  # For error_dist = nonpar, create new distribution for sampling error as a percentage.
   # This is actually performed in the power_sim() function, so it's only
   # generated once, instead of for each bootstrap, but I left it here
   # in case this function is being used without power_sim()
 
   if(!exists('rvar')){
     rvar <- if(error_dist == 'nonpar'){
-      sampling_data$diff <- abs(sampling_data$samp1 - sampling_data$samp2)
+      sampling_data$diff <- (abs(sampling_data$samp1 - sampling_data$samp2))/
+        ((sampling_data$samp1 + sampling_data$samp2)/2)
       function(n){fishmethods::remp(n, c(sampling_data$diff, -sampling_data$diff))}
     } else {function(n){rnorm(n, 0, sampling_sd)}} #need to specify # values to generate
     }
@@ -179,7 +179,9 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
   # Nested for loop creates a dataframe that includes a column for each effect size, and simulates
   # trends by using the previous years trend, rather than time = 0 trend.
-
+#
+#    es <- effect_size[1]
+#    col = sim_cols[1]
   for(es in effect_size){
     escol = paste0("ysim",
                    ifelse(es < 0, "_dec",
@@ -191,8 +193,21 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
     for(col in sim_cols){ # Vectorized approach to simulating consecutive trends based on previous year
       prevcol = which(names(data_sim) == col) - 1
 
-      data_sim[, col] <- data_sim[, prevcol] +
-        linear_pred + rvar(nrow(data_sim))}
+      # data_sim[, col] <- data_sim[, prevcol] + linear_pred +
+      #   (rvar(nrow(data_sim))/length(years))*data_sim[, prevcol] # error added as percent of prev. value/ # years
+
+      data_sim[,col] <- (data_sim[, prevcol]+ linear_pred) * (1 + rvar(nrow(data_sim))/length(years))
+
+      # Convert negative sim values to 0 if specified
+      if(pos_val == TRUE){
+        data_sim[, col][data_sim[, col] < 0] <- 0
+      }
+
+      if(!is.na(upper_val)){
+        data_sim[, col][data_sim[, col] > upper_val] <- upper_val
+      }
+
+      }
 
     es_dat <- data_sim %>% select(-year) %>% #mutate(ysim1 = y) %>%
       pivot_longer(cols = c(ysim1, all_of(sim_cols)),
@@ -205,15 +220,6 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   }
 
 
-  # Convert negative sim values to 0 if specified
-  if(pos_val == TRUE){
-    data_sim_long[,es_cols][data_sim_long[,es_cols] < 0] <- 0
-  }
-
-  if(!is.na(upper_val)){
-    data_sim_long[,es_cols][data_sim_long[,es_cols] > upper_val] <- upper_val
-  }
-
   # rbind slices dataset with nrow = max(sample_size) into smaller sample sizes
   sample_size_slices <- sample_size[sample_size < (max(sample_size))]
 
@@ -224,8 +230,13 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                         mutate(sample_size = n)})
   )
 
+  if(save_data == TRUE){utils::write.csv(full_dat,
+                          paste0("simulated_dataset", y, "_",
+                                 error_dist, "_", random_type, ".csv"), row.names = F)}
+
   # Run case bootstrap to determine if there's a significant trend for each n x es comb.
-  boot_mod <- map2_dfr(sim_mat[,1], sim_mat[,2],
+  boot_mod <- map2_dfr(sim_mat[,1], sim_mat[,2], .id = 'boot', #.progress = chatty,
+              #                       .options = furrr::furrr_options(seed = TRUE),
                        function(sampsize, resp){
                          ss_dat <- full_dat %>% filter(sample_size == sampsize) %>%
                            select(case, sample_size, year, all_of(resp))
@@ -233,13 +244,10 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                          iter <- as.numeric(rownames(sim_mat[sim_mat$sample_size == sampsize &
                                                                sim_mat$effect_size == resp,]))
 
-                         if(chatty == TRUE & iter %% 5 == 1){cat(".")} #tick every 5th sim comb
-                         if(chatty == TRUE & iter == nrow(sim_mat)){cat(".Done", "\n")}
-
-
                          mod <- case_boot_lmer(ss_dat, x = 'year', y = resp, ID = 'case',
                                                num_reps = num_reps, random_type = random_type,
                                                chatty = FALSE)
+
                          mod2 <- mod %>% filter(term == "Slope") %>%
                            mutate(sample_size = sampsize,
                                   effect_size = resp,

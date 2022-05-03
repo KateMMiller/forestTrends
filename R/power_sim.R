@@ -9,7 +9,6 @@
 #'
 #' @importFrom dplyr arrange first group_by mutate summarize
 #' @importFrom magrittr %>%
-#' @importFrom purrr map_dfr
 #'
 #' @param data Data frame containing an ID column that identifies each sample unit
 #' (e.g., Plot_Name), and at least one column with a response variable.
@@ -25,6 +24,9 @@
 #' @param num_reps Number of replicate bootstraps to run for each level of effect
 #' and sample size. Default is 100 for faster testing. However, 500-1000 is the
 #' better number for real analyses (note this could take many hours).
+#' @param num_pwr_reps Number of replicates to run for each level of effect
+#' and sample size to calculate power. Default is 100 for faster testing.
+#' However, 250+ is the better number for real analyses (note this could take many hours).
 #' @param error_dist Either "nonpar" or "normal". If nonpar is chosen, must specify
 #' a dataset of repeated measures, like from QA/QC sampling, to generate an error
 #' distribution based on the data. If normal is chosen, then a normal distribution
@@ -35,7 +37,7 @@
 #' data should include a unique ID column that is specified via the ID argument,
 #' and two columns for each sample named samp1 and samp2. The samp1 column is
 #' the first sample of the data. The samp2 column is the replicate sample of the site.
-#' @param var_hist TRUE or FALSE. If TRUE, plots a histogram of 1e6 calls from the random
+#' @param var_hist TRUE or FALSE. If TRUE, plots a histogram of 1e5 calls from the random
 #' variance function. If FALSE (default) doesn't plot anything.
 #' @param sampling_sd If error_dist = 'normal', must specify the standard deviation
 #' for the distribution. Otherwise leave blank.
@@ -52,7 +54,10 @@
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console,
 #' including the number of the power sample currently running and a tick for every
 #' replicate within the power bootstrap. FALSE will not print progress in console.
-#'
+#' @param parallel TRUE or FALSE. If TRUE, power simulation will use parallel
+#' processing across all but two of the machine's total number of cores.
+#' @param return_sim TRUE or FALSE. If TRUE, assigns simulation dataset to global environment.
+#' This option is helpful for troubleshooting.
 #' @examples
 #' \dontrun{
 #'
@@ -107,14 +112,24 @@
 
 power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                       random_type = c("intercept", "slope"),
-                      num_reps = 100, error_dist = c("nonpar", 'normal'),
+                      num_reps = 100, num_pwr_reps = 100, error_dist = c("nonpar", 'normal'),
                       sampling_data = NA, sampling_sd = NA, var_hist = FALSE,
                       effect_size = seq(-50, 50, 5), pos_val = TRUE, upper_val = NA,
-                      sample_size = seq(10, 100, 10), chatty = TRUE){
+                      sample_size = seq(10, 100, 10), chatty = TRUE, parallel = TRUE,
+                      return_sim = TRUE){
 
   if(!requireNamespace("fishmethods", quietly = TRUE)){
     stop("Package 'fishmethods' needed for this function to work. Please install it.", call. = FALSE)
   }
+
+  if(!requireNamespace("furrr", quietly = TRUE)){
+    stop("Package 'furrr' needed for this function to work. Please install it.", call. = FALSE)
+  }
+
+  if(!requireNamespace("future", quietly = TRUE)){
+    stop("Package 'future' needed for this function to work. Please install it.", call. = FALSE)
+  }
+
   if(is.null(data)){stop("Must specify data to run function")}
   stopifnot("data.frame" %in% class(data))
   stopifnot(is.na(sampling_data) | is.data.frame(sampling_data))
@@ -133,37 +148,48 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   #effect_size <- effect_size[effect_size != 0]
 
   sample_num <- ifelse(exists("sample_num"), sample_num, 1) # for case_boot_lmer()
-  if(chatty == TRUE){cat("Running bootstraps:", "\n")}
+  if(chatty == TRUE){cat("Starting power simulation", "\n")}
 
-  # For error_dist = nonpar, create new distribution for sampling error
+  # For error_dist = nonpar, create new distribution for sampling error as a percentage
   # QAQC data often has bias in 2nd sample, so function randomly assigns sign to
   # remove bias.
   rvar <- if(error_dist == 'nonpar'){
-    sampling_data$diff <- abs(sampling_data$samp1 - sampling_data$samp2)
+    sampling_data$diff <- (abs(sampling_data$samp1 - sampling_data$samp2))/
+      ((sampling_data$samp1 + sampling_data$samp2)/2)
     function(n){fishmethods::remp(n, c(sampling_data$diff, -sampling_data$diff))}
   } else {function(n){rnorm(n, 0, sampling_sd)}}
 
-  if(var_hist == TRUE){hist(rvar(1e5), main = "Histogram of error function")}
+  if(var_hist == TRUE){graphics::hist(rvar(1e5), main = "Histogram of error function")}
   # code is considerably slower for 1e6
 
   # First, sample the data, simulate trends, and determine if significant
   # using case_boot_power. Repeat process num_reps number of times
   # to calculate power as the percent of tests that were significant.
 
-  sim_mod <- map_dfr(seq_len(num_reps), function(reps){
-    if(chatty == TRUE){cat(reps, "out of", num_reps)}
+  if(parallel == TRUE){
+    num_workers <- as.numeric(length(future::availableWorkers()) - 2)
+    future::plan(future::multisession, gc = TRUE,
+                                    workers = num_workers)
+  }
 
-    case_boot_power(data, y = y, years = years, ID = ID,
-                     random_type = random_type,
-                     num_reps = num_reps,
-                     effect_size = effect_size,
-                     sample_size = sample_size,
-                     error_dist = error_dist,
-                     sampling_data = sampling_data,
-                     sampling_sd = sampling_sd,
-                     pos_val = pos_val,
-                     upper_val = upper_val) %>%
-      mutate(pwr_rep = reps)
+  sim_mod <- furrr::future_map_dfr(seq_len(num_pwr_reps),
+               #.id = 'pwr_rep',
+               .options = furrr::furrr_options(seed = TRUE),
+               .progress = chatty,
+    function(reps){
+      #if(chatty == TRUE){cat(reps, "out of", num_pwr_reps)}
+
+        case_boot_power(data, y = y, years = years, ID = ID,
+                        random_type = random_type,
+                        num_reps = num_reps,
+                        effect_size = effect_size,
+                        sample_size = sample_size,
+                        error_dist = error_dist,
+                        sampling_data = sampling_data,
+                        sampling_sd = sampling_sd,
+                        pos_val = pos_val,
+                        upper_val = upper_val) %>%
+        mutate(pwr_rep = reps)
   })
 
   # clean up columns
@@ -180,6 +206,8 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
       false_pos = ifelse(effect_size == 0 & signif == 1, 1, 0))
 
 
+  if(return_sim == TRUE){assign("sim_df", sim_mod2, envir = .GlobalEnv)}
+
   # calculate power
   power_calc <- sim_mod2 %>%
     group_by(effect_size, sample_size) %>%
@@ -195,6 +223,7 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
               lower95 = mean(lower95, na.rm = T),
               upper95 = mean(upper95, na.rm = T),
               num_boots = num_reps,
+              num_pwr_reps = sum(!is.na(pwr_rep)),
               .groups = 'drop')
 
 

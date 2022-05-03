@@ -62,9 +62,9 @@ trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name",
   tryCatch(
     {trend_form <-
       switch(random_type,
-              'intercept' =  as.formula(paste0(y, "~ ", x, "+ (1|", ID,")")),
-              'slope' = as.formula(paste0(y, "~ ", x, " + (1 + ", x, "|", ID, ")")),
-              'custom' = as.formula(paste0(y, "~ ", x, " + ", random_formula)))
+              'intercept' =  stats::as.formula(paste0(y, "~ ", x, "+ (1|", ID,")")),
+              'slope' = stats::as.formula(paste0(y, "~ ", x, " + (1 + ", x, "|", ID, ")")),
+              'custom' = stats::as.formula(paste0(y, "~ ", x, " + ", random_formula)))
 
       mod <- suppressMessages(lme4::lmer(trend_form, data = df))
       # fit model and clean up output
@@ -77,7 +77,8 @@ trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name",
       new_df <- data.frame(x = sort(unique(prediction::find_data(mod)[, x])))
       names(new_df) <- c(x)
       pred_df <- data.frame(term = paste0(substr(x, 1, 1), new_df[,x], "_response"),
-                            estimate = predict(mod, newdata = new_df, type = 'response', re.form = NA))},
+                            estimate = stats::predict(mod, newdata = new_df,
+                                                      type = 'response', re.form = NA))},
 
     error = function(e){warning("Model failed to fit, returning empty data.frame")}, #returns empty mod_df
     warning = function(w){warning("Model failed to fit, returning empty data.frame")} #returns empty mod_df

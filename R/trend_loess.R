@@ -63,12 +63,12 @@ trend_loess <- function(df, x = "cycle", y, ID = "Plot_Name", degree = 1, span =
                         span = span_use)
 
   tryCatch({
-    lform <- as.formula(paste0(y, "~ ", x))
-    mod <- loess(lform, data = df, span = span_use, degree = degree)
+    lform <- stats::as.formula(paste0(y, "~ ", x))
+    mod <- stats::loess(lform, data = df, span = span_use, degree = degree)
     new_df <- data.frame(x = sort(unique(mod$x)))
     names(new_df) <- c(x)
     pred_df <- data.frame(term = paste0(substr(x, 1, 1), new_df[,x], "_response"),
-                          estimate = predict(mod, newdata = new_df),
+                          estimate = stats::predict(mod, newdata = new_df),
                           span = span_use)
     },
     error = function(e){warning("Model failed to fit, returning empty data.frame")}#, #returns empty mod_df
