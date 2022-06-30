@@ -11,7 +11,7 @@
 #' are a park code.
 #' @param span numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
 #' and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
-#' You can calculate the number of time steps to include in the smoothing window by dividing p/n, where p is number of plots
+#' You can calculate the number of time steps to include in the smoothing window by dividing p/n, where p is number of panels
 #' you want to be included per window and n is number of timesteps in the data. When plotting years, knowing that panels include
 #' 4 years, it is generally safe to assume a linear response between 2 full cycles, and therefore use a span of 8/n. Note that
 #' if you specify degree = 1, then loess assumes a linear relationship within each span. If no span is specified, then
