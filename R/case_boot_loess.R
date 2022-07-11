@@ -69,15 +69,15 @@
 #'
 #' @export
 
-case_boot_loess <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
-                           span = NA_real_, degree = 1, num_reps, chatty = TRUE){
+case_boot_loess <- function(df, x = "cycle", y = NA, ID = "Plot_Name", group = NA,
+                            span = NA_real_, degree = 1, num_reps = NA, chatty = TRUE){
 
   if(is.null(df)){stop("Must specify df to run function")}
-  if(is.null(x)){stop("Must specify x variable to run function")}
-  if(is.null(y)){stop("Must specify y variable to run function")}
-  if(is.null(ID)){stop("Must specify ID variable to run function")}
-  if(is.null(num_reps)){stop("Must specify num_reps (number of replicates) for bootstrap")}
+  if(is.na(y)){stop("Must specify y variable to run function")}
+  if(is.na(num_reps) | !is.numeric(num_reps)){
+    stop("Must specify num_reps (number of replicates) as a number for bootstrap")}
   stopifnot(c(x, y, ID) %in% names(df))
+
   # stopifnot(is.numeric(df[,x]))
   # stopifnot(is.numeric(df[,y]))
 
@@ -86,7 +86,7 @@ case_boot_loess <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   grp <- ifelse(!is.na(group), paste(unique(df[,group])),
                                  paste(pname1))
 
-  plots <- data.frame(unique(df[,1]))
+  plots <- data.frame(unique(df[,ID]))
 
   nplots <- nrow(unique(plots))
 

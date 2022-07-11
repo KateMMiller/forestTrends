@@ -7,12 +7,12 @@
 case_boot_loess(
   df,
   x = "cycle",
-  y,
+  y = NA,
   ID = "Plot_Name",
   group = NA,
   span = NA_real_,
   degree = 1,
-  num_reps,
+  num_reps = NA,
   chatty = TRUE
 )
 }
