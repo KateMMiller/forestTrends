@@ -10,7 +10,7 @@ Depends:
   R(>= 4.0)
 Imports: 
     broom.mixed,
-    dplyr,
+    dplyr(>= 1.1.1),
     ggplot2,
     lme4,
     prediction,
