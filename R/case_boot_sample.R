@@ -85,7 +85,7 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   # Make sure nested variable in random effects is included in df_samp
   cols <- if(!is.na(nest_var)){c(ID, x, y, nest_var)} else {c(ID, x, y)}
 
-  df_samp <- dplyr::left_join(samp, df[,cols], by = c("ID" = ID)) %>%
+  df_samp <- dplyr::left_join(samp, df[,cols], by = c("ID" = ID), relationship = "many-to-many") %>%
     dplyr::arrange(case, x)
 
   # For custom formulas, have to replace smallest unit (e.g. Plot_Name) in formula
