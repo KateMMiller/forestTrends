@@ -51,7 +51,7 @@ mod <- trend_lmer(test_df, x = "cycle", y = "resp", ID = "plot_name", random_typ
 
 # custom random effects model for group = GRP.1 with plot nested within park
 
-mod2 <- trend_lmer(test_df \%>\% filter(group == "GRP.1"), x = "cycle", y = "resp", ID = "plot_name",
+mod2 <- trend_lmer(test_df |> filter(group == "GRP.1"), x = "cycle", y = "resp", ID = "plot_name",
   random_type = "custom", random_formula = "(1|park/plot_name)")
 }
 

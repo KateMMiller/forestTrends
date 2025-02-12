@@ -14,6 +14,7 @@ case_boot_sample(
   random_type = c("intercept", "slope", "custom"),
   random_formula = NA,
   nest_var = NA,
+  chatty = F,
   span = NA_real_,
   degree = 1,
   sample = TRUE,
@@ -43,6 +44,10 @@ If "custom" is used, must also specify random_formula.}
 \item{random_formula}{If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.}
 
 \item{nest_var}{Quoted column name containing the higher level grouping variable for a nested random effect.}
+
+\item{chatty}{TRUE or FALSE. TRUE will print progress in the console, including the first four characters
+in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE (default) will not print progress in console.
+Now that purrr and furrr have a progress bar, this feature is less needed.}
 
 \item{span}{numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
 and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.

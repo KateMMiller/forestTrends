@@ -8,7 +8,6 @@
 #' intervals for each combination across the replicate bootstraps.
 #'
 #' @importFrom dplyr arrange first group_by mutate summarize
-#' @importFrom magrittr %>%
 #'
 #' @param data Data frame containing an ID column that identifies each sample unit
 #' (e.g., Plot_Name), and at least one column with a response variable.
@@ -80,7 +79,7 @@
 #'  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
 #'  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 #'
-#'  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) %>%
+#'  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) |>
 #'    rename(samp1 = y1, samp2 = y2)
 #'
 #'  #-- Run function
@@ -172,7 +171,7 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                                     workers = num_workers)
   }
 
-  sim_mod <- furrr::future_map_dfr(seq_len(num_pwr_reps),
+  sim_mod <- furrr::future_map(seq_len(num_pwr_reps),
                #.id = 'pwr_rep',
                .options = furrr::furrr_options(seed = TRUE),
                .progress = chatty,
@@ -188,12 +187,12 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                         sampling_data = sampling_data,
                         sampling_sd = sampling_sd,
                         pos_val = pos_val,
-                        upper_val = upper_val) %>%
+                        upper_val = upper_val) |>
         mutate(pwr_rep = reps)
-  })
+  }) |> list_rbind()
 
   # clean up columns
-  sim_mod2 <- sim_mod %>%
+  sim_mod2 <- sim_mod |>
     mutate(effect_size = as.numeric(paste0(
       ifelse(grepl("dec", sim_mod$effect_size), "-", ""),
            gsub("ysim_", "",
@@ -209,8 +208,8 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   if(return_sim == TRUE){assign("sim_df", sim_mod2, envir = .GlobalEnv)}
 
   # calculate power
-  power_calc <- sim_mod2 %>%
-    group_by(effect_size, sample_size) %>%
+  power_calc <- sim_mod2 |>
+    group_by(effect_size, sample_size) |>
     summarize(power_pct = sum(signif_cor, na.rm = T)/sum(!is.na(pwr_rep)) * 100,
               #num_boots instead of num_reps in case some boots fail to return results
               false_pos_pct = sum(false_pos, na.rm = T)/sum(!is.na(pwr_rep)) * 100,
@@ -227,7 +226,7 @@ power_sim <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
               .groups = 'drop')
 
 
-  power_final <- power_calc %>% arrange(effect_size, sample_size)
+  power_final <- power_calc |> arrange(effect_size, sample_size)
 
   return(data.frame(power_final))
 }

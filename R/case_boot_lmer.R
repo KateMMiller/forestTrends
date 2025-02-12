@@ -26,12 +26,12 @@
 #' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
 #' @param nest_var Quoted column name containing the higher level grouping variable for a nested random effect.
 #' @param num_reps Number of replicates to run in the bootstrap.
-#' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
-#' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.
+#' @param chatty TRUE or FALSE. TRUE will print progress in the console, including the first four characters
+#' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE (default) will not print progress in console.
+#' Now that purrr and furrr have a progress bar, this feature is less needed.
 #'
-#' @importFrom magrittr %>%
 #' @importFrom dplyr left_join select
-#' @importFrom purrr map map_df
+#' @importFrom purrr list_rbind map
 #' @importFrom tidyr pivot_wider
 #'
 #' @examples
@@ -41,7 +41,7 @@
 #' fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
 #'                       cycle = rep(1:3, times = 9),
 #'                       resp = runif(27, 0, 20))
-#'
+#' # Use more than 10 reps in real setting. Here 10 is just for testing quickly.
 #' boot1 <- case_boot_lmer(fake_df, y = "resp", num_reps = 10, random_type = 'intercept', chatty = TRUE)
 #'
 #' #----- Dataset with 2 parks iterating through each park with purrr. Second park has more plots -----
@@ -54,16 +54,16 @@
 #'
 #'# Nest dataset by park
 #'
-#' nested_df <- fake_2pk %>% mutate(grp = park) %>% group_by(park) %>% nest()
+#' nested_df <- fake_2pk |> mutate(grp = park) |> group_by(park) |> nest()
 #'
 #' # Run case_boot_lmer on nested dataset
-#' boot2 <- nested_df %>% mutate(
+#' boot2 <- nested_df |> mutate(
 #'   model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
 #'                                     random_type = 'intercept', group = "grp",
 #'                                     num_reps = 100, chatty = TRUE)))
 #'
 #' # Compile results
-#' boot_results <- boot2 %>% select(park, model) %>% unnest(model) %>% select(-num_boots)
+#' boot_results <- boot2 |> select(park, model) |> unnest(model) |> select(-num_boots)
 #'
 #' #----- Dataset with 3 parks that will not go through bootstrap.
 #'   #----- Park 1 has too few plots Park 2 only has 1 plot with non-zero; Park 3 has <10% of plots with non-zero  -----
@@ -79,14 +79,14 @@
 #' resp[sample(53:125, 7)] <- runif(7, 1, 10) # make <10% of CCCC non-zero
 #'
 #' no_boots <- data.frame(Plot_Name, park, cycle, resp)
-#' nested_df <- no_boots %>% mutate(grp = park) %>% group_by(park) %>% nest()
+#' nested_df <- no_boots |> mutate(grp = park) |> group_by(park) |> nest()
 #' # Run case_boot_lmer on nested dataset
-#' boot2 <- nested_df %>% mutate(
+#' boot2 <- nested_df |> mutate(
 #'   model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
 #'                                     random_type = 'intercept', group = "grp",
-#'                                     num_reps = 100, chatty = TRUE)))
+#'                                     num_reps = 100), .progress = TRUE))
 #' # Compile results
-#' boot_results <- boot2 %>% select(park, model) %>% unnest(model) %>% select(-num_boots)
+#' boot_results <- boot2 |> select(park, model) |> unnest(model) |> select(-num_boots)
 #'
 #' #----- Examples with custom random effects
 #' park = rep(c("APRK", "BPRK", "CPRK"), each = 120)
@@ -108,7 +108,7 @@
 #'                         random_type = 'custom',
 #'                         random_formula = "(1|park/plot_name)",
 #'                         nest_var = "park",
-#'                         num_reps = 100, chatty = T)
+#'                         num_reps = 100)
 #'
 #' # nested random slope
 #' test2 <- case_boot_lmer(test_df,
@@ -117,7 +117,7 @@
 #'                         random_type = 'custom',
 #'                         random_formula = "(cycle|park/plot_name)",
 #'                         nest_var = "park",
-#'                         num_reps = 100, chatty = T)
+#'                         num_reps = 100)
 #' }
 #'
 #' @export
@@ -125,7 +125,7 @@
 case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
                            random_type = c('intercept', 'slope', 'custom'),
                            random_formula = NA, nest_var = NA,
-                           num_reps, chatty = TRUE){
+                           num_reps, chatty = FALSE){
 
   if(is.null(df)){stop("Must specify df to run function")}
   if(is.null(x)){stop("Must specify x variable to run function")}
@@ -150,28 +150,29 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
 
   run_boot <- ifelse(nplots < 7 | num_zplots <= 1 | prop_zero <= 0.1, FALSE, TRUE)
 
-  if(chatty == TRUE){cat(grp)}
+  #if(chatty == TRUE){cat(grp)}
 
   real_mod <- suppressWarnings(case_boot_sample(df, x = x, y = y, ID = ID, sample = F, sample_num = 1,
                                                 group = group,
                                                 random_type = random_type, random_formula = random_formula,
                                                 nest_var = nest_var,
-                                                model_type = 'lmer') %>%
+                                                model_type = 'lmer') |>
                                dplyr::select(-boot_num, -isSingular))
 
   if(run_boot == TRUE){
 
     boot_mod <-
-      suppressWarnings(purrr::map_df(seq_len(num_reps),
+      suppressWarnings(purrr::map(seq_len(num_reps),
                                      ~case_boot_sample(df, x = x, y = y, ID = ID, sample = T, sample_num = .x,
                                                        group = group,
                                                        random_type = random_type, random_formula = random_formula,
                                                        nest_var = nest_var,
-                                                       model_type = 'lmer')) %>%
-      tidyr::pivot_wider(names_from = term, values_from = estimate)) %>% data.frame()
+                                                       model_type = 'lmer'), .progress = chatty) |>
+                       purrr::list_rbind() |>
+      tidyr::pivot_wider(names_from = term, values_from = estimate)) |>  data.frame()
 
 
-    boot_CIs <- data.frame(t(apply(boot_mod %>% dplyr::select(-boot_num, -isSingular), 2,
+    boot_CIs <- data.frame(t(apply(boot_mod |> dplyr::select(-boot_num, -isSingular), 2,
                                    quantile, probs = c(0.025, 0.975), na.rm = T)),
                            num_boots = sum((ifelse(is.na(boot_mod$isSingular), 0, 1))),
                            num_boots_sing = sum(boot_mod$isSingular, na.rm = T))
@@ -190,7 +191,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
       warning(paste0(num_boot_fail, " bootstrapped samples failed to return a model fit."))}
 
     boot_CIs$term <- rownames(boot_CIs)
-    boot_CIs <- boot_CIs %>% dplyr::select(-num_boots_sing)
+    boot_CIs <- boot_CIs |>  dplyr::select(-num_boots_sing)
 
     colnames(boot_CIs) <- c("lower95", "upper95", "num_boots", "term")
 
@@ -204,7 +205,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
 
   results <- dplyr::left_join(real_mod, boot_CIs, by = "term")
 
-  if(chatty == TRUE){cat("Done", "\n")}
+  #if(chatty == TRUE){cat("Done", "\n")}
   return(results)
 }
 

@@ -12,7 +12,7 @@
 #' @importFrom stringr str_pad
 #' @importFrom tidyselect all_of
 #' @importFrom tidyr pivot_longer
-#' @importFrom purrr map_dfr map2_dfr
+#' @importFrom purrr map_dfr map2 list_rbind
 #'
 #' @param data Data frame containing an ID column that identifies each sample unit
 #' (e.g., Plot_Name), and at least one #' column with a response variable.
@@ -72,19 +72,19 @@
 #'  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
 #'  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 #'
-#'  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) %>%
+#'  dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) |>
 #'    rename(samp1 = y1, samp2 = y2)
 #'
 #'  #--- Run function
 #'  # Non-parametric sampling error
 #'  sim_np <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
 #'              error_dist = 'nonpar', sampling_data = dat_qc_wide, pos_val = TRUE,
-#'              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
+#'              effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 10)
 #'
 #'  # Normal sampling error allowing negative simulated values
 #'  sim_norm <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
 #'                error_dist = 'normal', sampling_sd = 0.2, pos_val = FALSE,
-#'                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
+#'                effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 10)
 #' }
 #'
 #'
@@ -109,7 +109,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   stopifnot("data.frame" %in% class(data))
   stopifnot(is.na(sampling_data) | is.data.frame(sampling_data))
   if(is.na(y)){stop("Must specify y variable to run function")}
-  if(!is.na(sampling_data) && !c("samp1", "samp2") %in% names(sampling_data)){
+  if(!(all(is.na(sampling_data))) && !all(c("samp1", "samp2") %in% names(sampling_data))){
     stop("The data.frame specified in sampling_data does not contain the required columns 'samp1' and 'samp2'")}
   stopifnot(all(is.numeric(years) & !is.na(years)))
   stopifnot(all(is.numeric(sample_size) & !is.na(sample_size)))
@@ -140,7 +140,7 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
   #colnames(plots) <- "ID" # bug handling for purrr::map
   n <- nrow(plots) # for strpad
   data$ID <- data[,ID]
-  data <- data %>% select(ID, y) %>% mutate(year = 1)
+  data <- data |> select(ID, y) |> mutate(year = 1)
 
   # Sample dataset with replacement to be the maximum sample size. This will be sliced by the smaller
   # sample sizes later to improve performance.
@@ -159,12 +159,12 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                     abs(effect_size))
 
   sim_mat <- expand.grid(sample_size = sample_size, effect_size = es_cols,
-                         stringsAsFactors = F) %>% data.frame()
+                         stringsAsFactors = F) |>  data.frame()
 
   # Build full wide dataset with years and number of samples for the for loop on simcols
   data_sim <- samp_max #data_samp
   data_sim[, sim_cols] <- as.numeric(NA_real_)
-  data_sim <- data_sim %>% #mutate(ysim1 = y) %>%
+  data_sim <- data_sim |>
     select(ID, year, case, sample_size, ysim1 = y, everything())
 
   # Build long-version of data_sim to bind simulated columns to at end of for loop
@@ -209,11 +209,11 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
       }
 
-    es_dat <- data_sim %>% select(-year) %>% #mutate(ysim1 = y) %>%
+    es_dat <- data_sim |>  select(-year)  |>
       pivot_longer(cols = c(ysim1, all_of(sim_cols)),
                    names_to = "year",
-                   values_to = all_of(escol)) %>%
-      mutate(year = as.numeric(substr(year, 5, 5))) %>%
+                   values_to = all_of(escol)) |>
+      mutate(year = as.numeric(substr(year, 5, 5))) |>
       select(all_of(escol))
 
     data_sim_long[, escol] <- es_dat
@@ -225,8 +225,8 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
 
   full_dat <- rbind(data_sim_long,
                     map_dfr(sample_size_slices, function(n){
-                      case_list <- unique(sort(data_sim_long$case))[1:n] %>% droplevels()
-                      data_slice <- data_sim_long %>% filter(case %in% case_list) %>%
+                      case_list <- unique(sort(data_sim_long$case))[1:n] |>  droplevels()
+                      data_slice <- data_sim_long |> filter(case %in% case_list) |>
                         mutate(sample_size = n)})
   )
 
@@ -235,10 +235,10 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                                  error_dist, "_", random_type, ".csv"), row.names = F)}
 
   # Run case bootstrap to determine if there's a significant trend for each n x es comb.
-  boot_mod <- map2_dfr(sim_mat[,1], sim_mat[,2], .id = 'boot', #.progress = chatty,
+  boot_mod <- map2(sim_mat[,1], sim_mat[,2], #.id = 'boot', #.progress = chatty,
               #                       .options = furrr::furrr_options(seed = TRUE),
                        function(sampsize, resp){
-                         ss_dat <- full_dat %>% filter(sample_size == sampsize) %>%
+                         ss_dat <- full_dat |>  filter(sample_size == sampsize) |>
                            select(case, sample_size, year, all_of(resp))
 
                          iter <- as.numeric(rownames(sim_mat[sim_mat$sample_size == sampsize &
@@ -248,11 +248,11 @@ case_boot_power <- function(data, y = NA, years = 1:5, ID = "Plot_Name",
                                                num_reps = num_reps, random_type = random_type,
                                                chatty = FALSE)
 
-                         mod2 <- mod %>% filter(term == "Slope") %>%
+                         mod2 <- mod |> filter(term == "Slope") |>
                            mutate(sample_size = sampsize,
                                   effect_size = resp,
                                   signif = ifelse(round(lower95, 4) > 0 | round(upper95, 4) < 0, 1, 0))
-                       })
+                       }) |> list_rbind()
 
   return(data.frame(boot_mod))
 }

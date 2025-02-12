@@ -15,7 +15,8 @@
 #' @param xlab Quoted title for x axis.
 #' @param ylab Quoted title for y axis.
 #' @param model_type Options are "lmer" (Default) or "loess".
-#' @param group Quoted column for facet wraps. If not specified, only 1 plot will be returned
+#' @param group Quoted column for facet wraps and test of significance. If more than one group (e.g. park or metric) exists in the
+#' data, be sure to include that as the grouping variable, so significance is properly assessed.
 #' @param ribbon Options are TRUE or FALSE (Default). If TRUE, will plot error as a ribbon instead of errorbars.
 #' @param sign_color String of 4 colors to indicate a trend that is not modeled, not significant or significant increase
 #' or significant decrease. Default is c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"), which are light grey, dark grey,
@@ -27,9 +28,10 @@
 #' identical among facets. Free means axes will vary by facets.
 #' @param facet_cols Number of columns for facet wrap. Default is 4.
 #' @param ptsize Size of points to be plotted. Default is 1. Must be numeric.
+#' @param legend_position Quoted position for legend following ggplot positions. Default is 'none'.
 #'
 #' @import ggplot2
-#' @importFrom dplyr case_when filter first last left_join mutate select
+#' @importFrom dplyr case_when filter first full_join last left_join mutate select
 #'
 #' @examples
 #' \dontrun{
@@ -54,28 +56,28 @@
 #'                        resp = runif(72, 0, 30))
 #'
 #' # Nest dataset by park
-#' nested_df <- fake_2pk %>% mutate(grp = park) %>% group_by(park) %>% nest()
+#' nested_df <- fake_2pk |> mutate(grp = park) |> group_by(park) |> nest()
 #'
 #' # Run case_boot_lmer on nested dataset
-#' boot2 <- nested_df %>% mutate(
+#' boot2 <- nested_df |> mutate(
 #'   model = map(data, ~case_boot_loess(., x = "cycle", y = "resp", ID = "Plot_Name",
 #'                                     span = 0.75, group = "grp",
 #'                                     num_reps = 100, chatty = TRUE)))
 #'
 #' # Compile results
-#' boot_results <- boot2 %>% select(park, model) %>% unnest(model) %>% select(-num_boots)
+#' boot_results <- boot2 |> select(park, model) |> unnest(model) |> select(-num_boots)
 #'
 #' # Plot results
 #' plot_trend_response(boot_results, xlab = "Cycle", ylab = "BA", group = "park", ribbon = T,
-#'                     facet_scales = "free") +
+#'                     facet_scales = "free", model_type = 'loess') +
 #'   scale_x_continuous(breaks = c(1, 2, 3), labels = c("1", "2", "3"))
 #' }
 #'
 #' @export
 
-plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'), group = NA,
+plot_trend_response <- function(df, xlab, ylab, model_type = 'lmer', group = NA,
                                 ribbon = FALSE, sign_color = c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"),
-                                facet_scales = c("fixed"), facet_cols = 4, ptsize = 1){
+                                facet_scales = "fixed", facet_cols = 4, ptsize = 1, legend_position = 'none'){
 
     match.arg(facet_scales, c("fixed", "free", "free_y", "free_x"))
 
@@ -87,112 +89,118 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
 
     df$time <- as.numeric(gsub("\\D", "", df$term))
 
-    df2 <- if(model_type == "lmer"){
-               if(!is.na(group)){
-                 left_join(df, df %>% filter(term == "Slope") %>%
-                                      mutate(sign = case_when(lower95 > 0 ~ "signinc",
-                                                              upper95 < 0 ~ "signdec",
-                                                              is.na(lower95) ~ "notmod",
-                                                              TRUE ~ "nonsign")) %>%
-                                      select(!!group_sym, sign),
-                            by = group) %>%
-                 filter(!term %in% c("Intercept", "Slope"))
-         } else {cbind(df, df %>% filter(term == "Slope") %>%
-                                  mutate(sign = case_when(lower95 > 0 ~ "signinc",
-                                                          upper95 < 0 ~ "signdec",
-                                                          is.na(lower95) ~ "notmod",
-                                                          TRUE ~ "nonsign")) %>%
-                                  select(sign)) %>%
-                 filter(!term %in% c("Intercept", "Slope"))
-         }
+    if(model_type == "lmer"){
+        sign_df <- df |> filter(term == "Slope") |>
+          mutate(signif = case_when(lower95 > 0 ~ "signinc",
+                                  upper95 < 0 ~ "signdec",
+                                  lower95 <= 0 & upper95 >= 0 ~ "notsign",
+                                  is.na(lower95 + upper95) ~ "notmod",
+                                  TRUE ~ NA_character_)) |>
+          select(-term, -estimate, -lower95, -upper95, -num_boots, -time)
+        com_names <- intersect(names(sign_df), names(df))
+
+        df2 <- full_join(df, sign_df, by = com_names)
+
     } else if (model_type == "loess"){
-               if(!is.na(group)){
-                 left_join(df, df %>% arrange(time) %>% group_by(!!group_sym) %>%
-                                 summarize(up_first = first(upper95),
-                                           up_last = last(upper95),
-                                           lo_first = first(lower95),
-                                           lo_last = last(lower95),
-                                           sign = case_when(up_first < lo_last ~ "signinc",
-                                                            lo_first > up_last ~ "signdec",
-                                                            is.na(up_first) ~ "notmod",
-                                                            TRUE ~ "nonsign")) %>%
-                                 select(!!group_sym, sign), by = group)
-               } else {
-                 cbind(df, df %>% arrange(time) %>%
-                               summarize(up_first = first(upper95),
-                                         up_last = last(upper95),
-                                         lo_first = first(lower95),
-                                         lo_last = last(lower95),
-                                         sign = case_when(up_first < lo_last ~ "signinc",
-                                                          lo_first > up_last ~ "signdec",
-                                                          is.na(up_first) ~ "notmod",
-                                                          TRUE ~ "nonsign")) %>% select(sign)
-                 )
+      if(!is.na(group)){
+        sign_df <- df |> arrange(time) |> group_by(!!group_sym) |>
+                          summarize(up_first = first(upper95),
+                                    up_last = last(upper95),
+                                    lo_first = first(lower95),
+                                    lo_last = last(lower95),
+                                    signif = case_when(up_first < lo_last ~ "signinc",
+                                                       lo_first > up_last ~ "signdec",
+                                                       is.na(up_first) ~ "notmod",
+                                                       TRUE ~ "notsign")) |>
+                          dplyr::select(!!group_sym, signif)
+        df2 <- full_join(df, sign_df, by = group)
 
+        } else {
+        sign_df <- df |> arrange(time) |>
+          summarize(up_first = first(upper95),
+                    up_last = last(upper95),
+                    lo_first = first(lower95),
+                    lo_last = last(lower95),
+                    signif = case_when(up_first < lo_last ~ "signinc",
+                                     lo_first > up_last ~ "signdec",
+                                     is.na(up_first) ~ "notmod",
+                                     TRUE ~ "notsign")) |>
+          dplyr::select(-up_first, -up_last, -lo_first, -lo_last)
 
-               }
+        df2 <- full_join(df, sign_df, by = intersect(names(df), names(sign_df)))
+       }
   }
-    #df2$time <- as.numeric(gsub("\\D", "", df2$term))
-    # hacky way to plot groups that didn't get modeled and so don't have errorbars or ribbons
-    df2$upper95 <- ifelse(is.na(df2$upper95), df2$estimate, df2$upper95)
-    df2$lower95 <- ifelse(is.na(df2$lower95), df2$estimate, df2$lower95)
 
   p <-
     if(model_type == "lmer"){
-    ggplot(df2, aes(x = time, y = estimate, linetype = sign, color = sign, fill = sign))+
-      {if(ribbon == FALSE) geom_errorbar(aes(ymin = lower95, ymax = upper95), width = 0.2, size = 0.5,
-                                         linetype = 'solid', na.rm = TRUE)}+
-      {if(ribbon == TRUE) geom_ribbon(aes(ymin = lower95, ymax = upper95, fill = sign, color = sign),
-                                      #fill = "#CACACA",
-                                      #color = "#CACACA",
-                                      lty = 1, alpha = 0.2, na.rm = TRUE)}+
-       geom_line(size = 0.5)+
+    df3 <- df2 |> dplyr::filter(!term %in% c("Intercept", "Slope"))
+    ggplot(df3, aes(x = time, y = estimate, color = factor(signif), fill = factor(signif), linetype = factor(signif))) +
+      {if(ribbon == FALSE) geom_errorbar(aes(ymin = lower95, ymax = upper95),
+                                         width = 0.2, linewidth = 0.5,
+                                         linetype = 'solid', na.rm = FALSE)} +
+      {if(ribbon == TRUE) geom_ribbon(aes(ymin = lower95, ymax = upper95),
+                                      lty = 1, alpha = 0.2, na.rm = FALSE)} +
+       geom_line(, linewidth = 0.5)+
        geom_point(size = ptsize, shape = 21, alpha = 0.8)+
-       scale_linetype_manual(values = c("notmod" = 'dashed', "nonsign" = 'dashed',
-                                        "signinc" = 'solid', "signdec" = 'solid'))+
-       scale_fill_manual(values = c("notmod" = "white", "nonsign" =  sign_color[2],
-                                    "signinc" = sign_color[3], "signdec" = sign_color[4]), drop = FALSE)+
-       scale_color_manual(values = c("notmod" = "#CACACA", "nonsign" = "black",
-                                     "signinc" = sign_color[3], "signdec" = sign_color[4]), drop = FALSE)+
-       # scale_shape_manual(values = c("notmod" = 21, "nonsign" = 21,
-       #                               "signinc" = 21, "signdec" = 21))+
-       #scale_fill_manual(values = c("notmod" = 'white', "nonsign" = 'white', "sign" = 'black'))+
-       #scale_color_manual(values = c("notmod" = "#ACACAC", "nonsign" = "black", "sign" = "black"))+
+       scale_linetype_manual(values = c("notmod" = 'dashed', "notsign" = 'dashed',
+                                        "signinc" = 'solid', "signdec" = 'solid'),
+                             labels = c("notmod" = "Not modeled", "notsign"= "Not sign.",
+                                        "signinc" = "Sign. increase", "signdec" = "Sign. decline"),
+                             name = "Significance",
+                             drop = F) +
+       scale_color_manual(values = c("notmod" = "#CACACA", "notsign" = "black",
+                                     "signinc" = sign_color[3], "signdec" = sign_color[4]),
+                          labels = c("notmod" = "Not modeled", "notsign"= "Not sign.",
+                                     "signinc" = "Sign. increase", "signdec" = "Sign. decline"),
+                          name = "Significance",
+                          drop = FALSE) +
+       scale_fill_manual(values = c("notmod" = "#CACACA", "notsign" = "black",
+                                    "signinc" = sign_color[3], "signdec" = sign_color[4]),
+                         labels = c("notmod" = "Not modeled", "notsign"= "Not sign.",
+                                    "signinc" = "Sign. increase", "signdec" = "Sign. decline"),
+                         name = "Significance",
+                         drop = FALSE) +
        theme(axis.text = element_text(size = 11),
-             axis.title = element_text(size = 12),
+             axis.title = element_text(size = 11),
+             legend.text = element_text(size = 10),
+             legend.title = element_text(size = 10),
              panel.background = element_blank(),
              panel.grid.major = element_blank(),
              panel.grid.minor = element_blank(),
-             panel.border = element_rect(colour = "black", fill = NA, size = 0.1),
-             legend.position = 'none')+
-       {if(!is.na(group)) facet_wrap(~df2[[group]], drop = FALSE, scales = facet_scales, ncol = facet_cols)}+
+             panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.1),
+             legend.position = legend_position) +
+       {if(!is.na(group)) facet_wrap(~df3[[group]], drop = FALSE, scales = facet_scales, ncol = facet_cols)} +
        #scale_x_continuous(breaks = xbreaks, labels = xlabels)+
        labs(x = xlab, y = ylab)
     } else if(model_type == "loess"){
       ggplot(df2, aes(x = time, y = estimate, linetype = sign, color = sign, fill = sign))+
-        {if(ribbon == FALSE) geom_errorbar(aes(ymin = lower95, ymax = upper95), width = 0.2, size = 0.5,
+        {if(ribbon == FALSE) geom_errorbar(aes(ymin = lower95, ymax = upper95), width = 0.2, linewidth = 0.5,
                                            linetype = 'solid', na.rm = TRUE)}+
         {if(ribbon == TRUE) geom_ribbon(aes(ymin = lower95, ymax = upper95, fill = sign, color = sign),
                                         #fill = "#CACACA",
                                         #color = "#CACACA",
                                         lty = 1, alpha = 0.2, na.rm = TRUE)}+
-        geom_line(size = 0.5)+
+        geom_line(linewidth = 0.5)+
         geom_point(size = ptsize, shape = 21, alpha = 0.8)+
-        scale_linetype_manual(values = c("notmod" = 'dashed', "nonsign" = 'dashed',
-                                         "signinc" = 'solid', "signdec" = 'solid'), drop = FALSE)+
-        #scale_fill_manual(values = c("notmod" = 'white', "nonsign" = 'white', "sign" = 'black'))+
-        #scale_color_manual(values = c("notmod" = "#ACACAC", "nonsign" = "black", "sign" = "black"))+
-        scale_fill_manual(values = c("notmod" = "white", "nonsign" =  sign_color[2],
-                                     "signinc" = sign_color[3], "signdec" = sign_color[4]), drop = FALSE)+
-        scale_color_manual(values = c("notmod" = "#CACACA", "nonsign" = "black",
-                                      "signinc" = sign_color[3], "signdec" = sign_color[4]), drop = FALSE)+
+        scale_linetype_manual(values = c("notmod" = 'dashed', "notsign" = 'dashed',
+                                         "signinc" = 'solid', "signdec" = 'solid'),
+                              labels = c("Not modeled", "Not sign.", "Sign. increase", "Sign. decline"),
+                              name = "Significance", drop = F) +
+        scale_color_manual(values = c("notmod" = "#CACACA", "notsign" = "black",
+                                      "signinc" = sign_color[3], "signdec" = sign_color[4]),
+                           labels = c("Not modeled", "Not sign.", "Sign. increase", "Sign. decline"),
+                           aesthetics = c("fill", "color"),
+                           name = "Significance",
+                           drop = FALSE) +
         theme(axis.text = element_text(size = 11),
               axis.title = element_text(size = 12),
+              legend.text = element_text(size = 10),
+              legend.title = element_text(size = 10),
               panel.background = element_blank(),
               panel.grid.major = element_blank(),
               panel.grid.minor = element_blank(),
-              panel.border = element_rect(colour = "black", fill = NA, size = 0.1),
-              legend.position = 'none')+
+              panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.1),
+              legend.position = legend_position)+
         {if(!is.na(group)) facet_wrap(~df2[[group]], drop = FALSE, scales = facet_scales, ncol = facet_cols)}+
         #scale_x_continuous(breaks = xbreaks, labels = xlabels)+
         labs(x = xlab, y = ylab)

@@ -72,16 +72,16 @@ fake_2pk <- data.frame(Plot_Name = c(rep(paste0(rep("APRK-", 12), sprintf("\%02d
                        resp = runif(72, 0, 30))
 
 # Nest dataset by park
-nested_df <- fake_2pk \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
+nested_df <- fake_2pk |> mutate(grp = park) |> group_by(park) |> nest()
 
 # Run case_boot_loess on nested dataset
-boot2 <- nested_df \%>\% mutate(
+boot2 <- nested_df |> mutate(
   model = map(data, ~case_boot_loess(., x = "cycle", y = "resp", ID = "Plot_Name",
                                     span = 0.95, group = "grp",
                                     num_reps = 100, chatty = TRUE)))
 
 # Compile results
-boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model)
+boot_results <- boot2 |> select(park, model) |> unnest(model)
 
 
 }
