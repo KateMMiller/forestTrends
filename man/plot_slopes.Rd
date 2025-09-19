@@ -50,16 +50,16 @@ fake_2pk$resp2 <- 1 + fake_2pk$cycle * 0.5 + rnorm(159)
 
 # Run case_boot_lmer iterating on park and response variable
 boot2 <- map2_df(rep(c("APRK", "BPRK"), each = 2), rep(c('resp1', 'resp2'), times = 2),
-                 function(park, y){case_boot_lmer(df = fake_2pk \%>\% filter(Park == park),
+                 function(park, y){case_boot_lmer(df = fake_2pk |> filter(Park == park),
                                                   x = "cycle", y = y, ID = "Plot_Name",
                                                   random_type = 'intercept',
-                                                  num_reps = 100, chatty = TRUE) \%>\%
+                                                  num_reps = 100, chatty = TRUE) |>
                      mutate(park = paste(park), resp = paste(y))})
 
 
 # Plot results
 # Mostly default settings
-plot_slopes(boot2 \%>\% filter(resp == "resp2"), ylabel = 'Response', sign_only = TRUE)
+plot_slopes(boot2 |> filter(resp == "resp2"), ylabel = 'Response', sign_only = TRUE)
 
 # Order parks different than alphabetical
 boot2$park_ord <- factor(boot2$park, levels = c("BPRK", "APRK"))

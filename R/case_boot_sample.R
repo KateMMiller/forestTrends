@@ -33,8 +33,10 @@
 #' run trend_lmer() on the original dataset.
 #' @param sample_num Used for iteration to indicate the replicate number of the bootstrap. Do not need to specify if not
 #' running within case_boot_lmer().
+#' @param chatty TRUE or FALSE. TRUE will print progress in the console, including the first four characters
+#' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE (default) will not print progress in console.
+#' Now that purrr and furrr have a progress bar, this feature is less needed.
 #'
-#' @importFrom magrittr %>%
 #' @importFrom dplyr arrange left_join mutate
 #' @importFrom stringr str_pad
 #'
@@ -57,7 +59,7 @@
 case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
                              model_type = c("lmer", "loess"),
                              random_type = c("intercept", "slope", "custom"), random_formula = NA,
-                             nest_var = NA,
+                             nest_var = NA, chatty = F,
                              span = NA_real_, degree = 1, sample = TRUE, sample_num = 1){
 
   if(is.null(df)){stop("Must specify df to run function")}
@@ -76,7 +78,7 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
 
   samp <- if(sample == TRUE){
     data.frame(ID = sample(plots$ID, n, replace = TRUE))
-  } else {data.frame(plots)} %>%
+  } else {data.frame(plots)} |>
     dplyr::arrange(ID)
 
   # Set up unique naming column, so plots selected more than once have a unique ID.
@@ -85,7 +87,7 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   # Make sure nested variable in random effects is included in df_samp
   cols <- if(!is.na(nest_var)){c(ID, x, y, nest_var)} else {c(ID, x, y)}
 
-  df_samp <- dplyr::left_join(samp, df[,cols], by = c("ID" = ID)) %>%
+  df_samp <- dplyr::left_join(samp, df[,cols], by = c("ID" = ID)) |>
     dplyr::arrange(case, x)
 
   # For custom formulas, have to replace smallest unit (e.g. Plot_Name) in formula
@@ -97,18 +99,18 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
     if(model_type == "lmer"){
       suppressMessages(
         trend_lmer(df_samp, x = x, y = y, ID = "case",
-                   random_type = random_type, random_formula = rand_form)) %>%
+                   random_type = random_type, random_formula = rand_form)) |>
         dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
     } else if(model_type == "loess"){
       suppressMessages(
-        trend_loess(df_samp, x = x, y = y, ID = "case", span = span, degree = degree)) %>%
+        trend_loess(df_samp, x = x, y = y, ID = "case", span = span, degree = degree)) |>
         dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
     }
 
-  chatty <- ifelse(exists("chatty"), chatty, FALSE)
+  #chatty <- ifelse(exists("chatty"), chatty, FALSE)
   sample_num <- ifelse(exists("sample_num"), sample_num, 1)
 
-  if(chatty == TRUE & (sample_num %% 10) == 0){cat(".")} #prints tick every 10 reps
+  #if(chatty == TRUE & (sample_num %% 10) == 0){cat(".")} #prints tick every 10 reps
 
   return(mod)
 }

@@ -102,19 +102,19 @@ Only enabled for lmer(). Internal function used in power_sim().
  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 
- dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \%>\%
+ dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) |>
    rename(samp1 = y1, samp2 = y2)
 
  #--- Run function
  # Non-parametric sampling error
  sim_np <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
              error_dist = 'nonpar', sampling_data = dat_qc_wide, pos_val = TRUE,
-             effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
+             effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 10)
 
  # Normal sampling error allowing negative simulated values
  sim_norm <- forestTrends::case_boot_power(dat, y = 'y', ID = 'site', random_type = 'intercept',
                error_dist = 'normal', sampling_sd = 0.2, pos_val = FALSE,
-               effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 100)
+               effect_size = seq(-20, 20, 5), sample_size = c(10, 25, 50, 100), num_reps = 10)
 }
 
 

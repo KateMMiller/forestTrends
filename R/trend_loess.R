@@ -18,7 +18,7 @@
 #' fANCOVA::loess.as() will be used to determine the optimum span (Note: user specified is preferred).
 #' @param degree order of polynomial to fit. Values of 1 (Default) is linear, 2 is quadratic, etc. Degrees of 1 or 2 are
 #' generally recommended, depending on how wavy the line should to be.
-#' @importFrom magrittr %>%
+#'
 #' @importFrom dplyr filter select
 #'
 #' @examples

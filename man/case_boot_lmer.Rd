@@ -14,7 +14,7 @@ case_boot_lmer(
   random_formula = NA,
   nest_var = NA,
   num_reps,
-  chatty = TRUE
+  chatty = FALSE
 )
 }
 \arguments{
@@ -41,8 +41,9 @@ If "custom" is used, must also specify random_formula.}
 
 \item{num_reps}{Number of replicates to run in the bootstrap.}
 
-\item{chatty}{TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
-in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.}
+\item{chatty}{TRUE or FALSE. TRUE will print progress in the console, including the first four characters
+in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE (default) will not print progress in console.
+Now that purrr and furrr have a progress bar, this feature is less needed.}
 }
 \description{
 For each replicate, as specified by num_reps, function will generate a bootstrapped sample of data from the
@@ -62,7 +63,7 @@ the bootstrap and calculate confidence intervals.
 fake_df <- data.frame(Plot_Name = rep(paste0(rep("PARK.", 9), 1:9), each = 3),
                       cycle = rep(1:3, times = 9),
                       resp = runif(27, 0, 20))
-
+# Use more than 10 reps in real setting. Here 10 is just for testing quickly.
 boot1 <- case_boot_lmer(fake_df, y = "resp", num_reps = 10, random_type = 'intercept', chatty = TRUE)
 
 #----- Dataset with 2 parks iterating through each park with purrr. Second park has more plots -----
@@ -75,16 +76,16 @@ resp = runif(159, 0, 30))
 
 # Nest dataset by park
 
-nested_df <- fake_2pk \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
+nested_df <- fake_2pk |> mutate(grp = park) |> group_by(park) |> nest()
 
 # Run case_boot_lmer on nested dataset
-boot2 <- nested_df \%>\% mutate(
+boot2 <- nested_df |> mutate(
   model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
                                     random_type = 'intercept', group = "grp",
                                     num_reps = 100, chatty = TRUE)))
 
 # Compile results
-boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
+boot_results <- boot2 |> select(park, model) |> unnest(model) |> select(-num_boots)
 
 #----- Dataset with 3 parks that will not go through bootstrap.
   #----- Park 1 has too few plots Park 2 only has 1 plot with non-zero; Park 3 has <10\% of plots with non-zero  -----
@@ -100,14 +101,14 @@ resp <- c(runif(18, 0, 10),
 resp[sample(53:125, 7)] <- runif(7, 1, 10) # make <10\% of CCCC non-zero
 
 no_boots <- data.frame(Plot_Name, park, cycle, resp)
-nested_df <- no_boots \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
+nested_df <- no_boots |> mutate(grp = park) |> group_by(park) |> nest()
 # Run case_boot_lmer on nested dataset
-boot2 <- nested_df \%>\% mutate(
+boot2 <- nested_df |> mutate(
   model = map(data, ~case_boot_lmer(., x = "cycle", y = "resp", ID = "Plot_Name",
                                     random_type = 'intercept', group = "grp",
-                                    num_reps = 100, chatty = TRUE)))
+                                    num_reps = 100), .progress = TRUE))
 # Compile results
-boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
+boot_results <- boot2 |> select(park, model) |> unnest(model) |> select(-num_boots)
 
 #----- Examples with custom random effects
 park = rep(c("APRK", "BPRK", "CPRK"), each = 120)
@@ -129,7 +130,7 @@ test1 <- case_boot_lmer(test_df,
                         random_type = 'custom',
                         random_formula = "(1|park/plot_name)",
                         nest_var = "park",
-                        num_reps = 100, chatty = T)
+                        num_reps = 100)
 
 # nested random slope
 test2 <- case_boot_lmer(test_df,
@@ -138,7 +139,7 @@ test2 <- case_boot_lmer(test_df,
                         random_type = 'custom',
                         random_formula = "(cycle|park/plot_name)",
                         nest_var = "park",
-                        num_reps = 100, chatty = T)
+                        num_reps = 100)
 }
 
 }

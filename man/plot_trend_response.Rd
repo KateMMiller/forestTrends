@@ -8,13 +8,14 @@ plot_trend_response(
   df,
   xlab,
   ylab,
-  model_type = c("lmer", "loess"),
+  model_type = "lmer",
   group = NA,
   ribbon = FALSE,
   sign_color = c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"),
-  facet_scales = c("fixed"),
+  facet_scales = "fixed",
   facet_cols = 4,
-  ptsize = 1
+  ptsize = 1,
+  legend_position = "none"
 )
 }
 \arguments{
@@ -27,7 +28,8 @@ variable, and at least one column with a response variable. If Unit_Code is in t
 
 \item{model_type}{Options are "lmer" (Default) or "loess".}
 
-\item{group}{Quoted column for facet wraps. If not specified, only 1 plot will be returned}
+\item{group}{Quoted column for facet wraps and test of significance. If more than one group (e.g. park or metric) exists in the
+data, be sure to include that as the grouping variable, so significance is properly assessed.}
 
 \item{ribbon}{Options are TRUE or FALSE (Default). If TRUE, will plot error as a ribbon instead of errorbars.}
 
@@ -44,6 +46,8 @@ identical among facets. Free means axes will vary by facets.}
 \item{facet_cols}{Number of columns for facet wrap. Default is 4.}
 
 \item{ptsize}{Size of points to be plotted. Default is 1. Must be numeric.}
+
+\item{legend_position}{Quoted position for legend following ggplot positions. Default is 'none'.}
 }
 \description{
 Function plots predicted responses for each time step in the data and 95% confidence intervals
@@ -79,20 +83,20 @@ fake_2pk <- data.frame(Plot_Name = c(rep(paste0(rep("APRK-", 12), sprintf("\%02d
                        resp = runif(72, 0, 30))
 
 # Nest dataset by park
-nested_df <- fake_2pk \%>\% mutate(grp = park) \%>\% group_by(park) \%>\% nest()
+nested_df <- fake_2pk |> mutate(grp = park) |> group_by(park) |> nest()
 
 # Run case_boot_lmer on nested dataset
-boot2 <- nested_df \%>\% mutate(
+boot2 <- nested_df |> mutate(
   model = map(data, ~case_boot_loess(., x = "cycle", y = "resp", ID = "Plot_Name",
                                     span = 0.75, group = "grp",
                                     num_reps = 100, chatty = TRUE)))
 
 # Compile results
-boot_results <- boot2 \%>\% select(park, model) \%>\% unnest(model) \%>\% select(-num_boots)
+boot_results <- boot2 |> select(park, model) |> unnest(model) |> select(-num_boots)
 
 # Plot results
 plot_trend_response(boot_results, xlab = "Cycle", ylab = "BA", group = "park", ribbon = T,
-                    facet_scales = "free") +
+                    facet_scales = "free", model_type = 'loess') +
   scale_x_continuous(breaks = c(1, 2, 3), labels = c("1", "2", "3"))
 }
 

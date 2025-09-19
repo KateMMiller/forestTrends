@@ -28,7 +28,6 @@
 #' @param chatty TRUE or FALSE. TRUE (default) will print progress in the console, including the first four characters
 #' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE will not print progress in console.
 #'
-#' @importFrom magrittr %>%
 #' @importFrom dplyr arrange left_join mutate select
 #' @importFrom purrr map map_df
 #' @importFrom tidyr pivot_wider
@@ -53,16 +52,16 @@
 #'                        resp = runif(72, 0, 30))
 #'
 #' # Nest dataset by park
-#' nested_df <- fake_2pk %>% mutate(grp = park) %>% group_by(park) %>% nest()
+#' nested_df <- fake_2pk |> mutate(grp = park) |> group_by(park) |> nest()
 #'
 #' # Run case_boot_loess on nested dataset
-#' boot2 <- nested_df %>% mutate(
+#' boot2 <- nested_df |> mutate(
 #'   model = map(data, ~case_boot_loess(., x = "cycle", y = "resp", ID = "Plot_Name",
 #'                                     span = 0.95, group = "grp",
 #'                                     num_reps = 100, chatty = TRUE)))
 #'
 #' # Compile results
-#' boot_results <- boot2 %>% select(park, model) %>% unnest(model)
+#' boot_results <- boot2 |> select(park, model) |> unnest(model)
 #'
 #'
 #' }
@@ -94,7 +93,7 @@ case_boot_loess <- function(df, x = "cycle", y = NA, ID = "Plot_Name", group = N
 
   real_mod <- suppressWarnings(case_boot_sample(df, x = x, y = y, ID = ID,
                                                 sample = F, sample_num = 1,
-                                                model_type = 'loess', span = span, degree = degree) %>%
+                                                model_type = 'loess', span = span, degree = degree) |>
                                  dplyr::select(-boot_num))
   span_use <- unique(real_mod$span)
 
@@ -103,9 +102,8 @@ case_boot_loess <- function(df, x = "cycle", y = NA, ID = "Plot_Name", group = N
     suppressWarnings(purrr::map_df(seq_len(num_reps),
                                    ~case_boot_sample(df, x = x, y = y, ID = ID,
                                                      sample = T, sample_num = .x,
-                                                     model_type = 'loess', span = span_use, degree = degree)) %>%
-    #select(-3) %>%
-    tidyr::pivot_wider(names_from = term, values_from = estimate)) %>% data.frame()
+                                                     model_type = 'loess', span = span_use, degree = degree)) |>
+    tidyr::pivot_wider(names_from = term, values_from = estimate)) |> data.frame()
 
 
     boot_CIs <- data.frame(t(apply(boot_mod, 2,
@@ -127,9 +125,9 @@ case_boot_loess <- function(df, x = "cycle", y = NA, ID = "Plot_Name", group = N
    boot_CIs
    }
 
-  results <- dplyr::left_join(real_mod, boot_CIs, by = "term") %>%
-             dplyr::mutate(x = as.numeric(gsub("\\D", "", term))) %>%
-             dplyr::select(term, x, estimate, lower95, upper95, span, num_boots) %>%
+  results <- dplyr::left_join(real_mod, boot_CIs, by = "term") |>
+             dplyr::mutate(x = as.numeric(gsub("\\D", "", term))) |>
+             dplyr::select(term, x, estimate, lower95, upper95, span, num_boots) |>
              dplyr::arrange(x)
 
   colnames(results) <- c('term', paste0(x), 'estimate', 'lower95', 'upper95', 'span', 'num_boots')

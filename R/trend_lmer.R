@@ -15,7 +15,6 @@
 #' If "custom" is used, must also specify random_formula.
 #' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
 #'
-#' @importFrom magrittr %>%
 #' @importFrom lme4 lmer
 #' @importFrom broom.mixed tidy
 #' @importFrom dplyr filter select
@@ -37,7 +36,7 @@
 #'
 #' # custom random effects model for group = GRP.1 with plot nested within park
 #'
-#' mod2 <- trend_lmer(test_df %>% filter(group == "GRP.1"), x = "cycle", y = "resp", ID = "plot_name",
+#' mod2 <- trend_lmer(test_df |> filter(group == "GRP.1"), x = "cycle", y = "resp", ID = "plot_name",
 #'   random_type = "custom", random_formula = "(1|park/plot_name)")
 #' }
 #'
@@ -68,8 +67,8 @@ trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name",
 
       mod <- suppressMessages(lme4::lmer(trend_form, data = df))
       # fit model and clean up output
-      mod_df <- broom.mixed::tidy(mod) %>% dplyr::filter(effect == 'fixed') %>%
-        dplyr::select(term, estimate) %>% data.frame()
+      mod_df <- broom.mixed::tidy(mod) |> dplyr::filter(effect == 'fixed') |>
+        dplyr::select(term, estimate) |> data.frame()
       mod_df$term[mod_df$term == "(Intercept)"] <- "Intercept"
       mod_df$term[mod_df$term == x] <- "Slope"
       # get predicted mean response for each cycle in the dataset
@@ -84,7 +83,7 @@ trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name",
     warning = function(w){warning("Model failed to fit, returning empty data.frame")} #returns empty mod_df
   )
 
-  output <- rbind(mod_df, pred_df) %>%
+  output <- rbind(mod_df, pred_df) |>
     dplyr::mutate(isSingular = ifelse(is.na(estimate), NA_real_, as.numeric(lme4::isSingular(mod))))
 
     return(output)

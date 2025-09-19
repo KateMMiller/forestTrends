@@ -12,6 +12,7 @@
 #' then points and lines will be color coded by network, where ERMN is blue, MIDN is orange, NCRN is yellow, and NETN is green.
 #' @param sign_only TRUE/FALSE. Denotes whether to plot all trends (FALSE; Default) or only significant trends (TRUE).
 #' @param legend_position Quoted position for legend following ggplot positions. Default is 'none'.
+#'
 #' @import ggplot2
 #' @importFrom dplyr arrange filter mutate
 #'
@@ -34,16 +35,16 @@
 #'
 #' # Run case_boot_lmer iterating on park and response variable
 #' boot2 <- map2_df(rep(c("APRK", "BPRK"), each = 2), rep(c('resp1', 'resp2'), times = 2),
-#'                  function(park, y){case_boot_lmer(df = fake_2pk %>% filter(Park == park),
+#'                  function(park, y){case_boot_lmer(df = fake_2pk |> filter(Park == park),
 #'                                                   x = "cycle", y = y, ID = "Plot_Name",
 #'                                                   random_type = 'intercept',
-#'                                                   num_reps = 100, chatty = TRUE) %>%
+#'                                                   num_reps = 100, chatty = TRUE) |>
 #'                      mutate(park = paste(park), resp = paste(y))})
 #'
 #'
 #' # Plot results
 #' # Mostly default settings
-#' plot_slopes(boot2 %>% filter(resp == "resp2"), ylabel = 'Response', sign_only = TRUE)
+#' plot_slopes(boot2 |> filter(resp == "resp2"), ylabel = 'Response', sign_only = TRUE)
 #'
 #' # Order parks different than alphabetical
 #' boot2$park_ord <- factor(boot2$park, levels = c("BPRK", "APRK"))
@@ -64,14 +65,14 @@ plot_slopes <- function(df, ylabel, order = NA, group = NA, sign_only = FALSE, l
   order_sym <- if(!missing(order)){sym(order)} else {sym("park")}
 
   df1 <- if(!is.na(order)){
-    df %>% filter(term == "Slope") %>% arrange(desc(!!order_sym))
+    df |> filter(term == "Slope") |> arrange(desc(!!order_sym))
   } else {
-    df %>% filter(term == "Slope")}
+    df |> filter(term == "Slope")}
 
-  df2 <- df1 %>% mutate(sign = ifelse(lower95 > 0 | upper95 < 0, "sign", "nonsign")) %>%
-                 filter(!is.na(lower95))
+  df2 <- df1 |> mutate(sign = ifelse(lower95 > 0 | upper95 < 0, "sign", "nonsign")) |>
+                 filter(!is.na(estimate))
 
-  df3 <- if(sign_only == TRUE){df2 %>% filter(sign == "sign")} else {df2}
+  df3 <- if(sign_only == TRUE){df2 |> filter(sign == "sign")} else {df2}
 
 
   p <-
@@ -82,14 +83,14 @@ plot_slopes <- function(df, ylabel, order = NA, group = NA, sign_only = FALSE, l
           geom_hline(yintercept = 0, lwd = 1, color = 'DimGrey') +
           geom_errorbar(aes(ymin = lower95, ymax = upper95,
                             color = !!group_sym),
-                        width = 1.5, size = 1, show.legend = F)+
+                        width = 1.5, linewidth = 1, show.legend = F) +
           # Have to add 2 geom_points, so significant ones can be solid and color coded by group
           # and non-sign are filled white
           {if(!missing(group))
             geom_point(aes(fill = !!group_sym),
                        stroke = 1, size = 2, fill = 'white', color = 'DimGrey', shape = 21)}+
           {if(!missing(order))
-            geom_point(data = df2 %>% filter(sign == "sign"),
+            geom_point(data = df2 |> filter(sign == "sign"),
                      aes(x = !!order_sym,
                          y = estimate,
                          fill = !!group_sym),
@@ -97,21 +98,21 @@ plot_slopes <- function(df, ylabel, order = NA, group = NA, sign_only = FALSE, l
           {if(missing(order))
             geom_point(stroke = 1, size = 2, fill = 'white', color = 'DimGrey', shape = 21)}+
 
-          {if(!missing(group) & group == "Network"){
-                scale_fill_manual(values = c("ERMN" = "#97BCF7", "MIDN" = "#F9AD51", "NCBN" = "#DC84F8",
+          {if(!missing(group) & group %in% c("Network", "network")){
+                scale_fill_manual(values = c("ERMN" = "#6b98de", "MIDN" = "#F9AD51", "NCBN" = "#DC84F8",
                                              "NCRN" = "#E9E905", "NETN" = "#78E43C"),
-                                  name = "Network")} else {scale_fill_brewer()}}+
-          {if(!missing(group) & group == "Network"){
-                scale_color_manual(values = c("ERMN" = "#97BCF7", "MIDN" = "#F9AD51", "NCBN" = "#DC84F8",
+                                  name = "Network")} else {scale_fill_brewer(palette = "Set2")}}+
+          {if(!missing(group) & group %in% c("Network", "network")){
+                scale_color_manual(values = c("ERMN" = "#6b98de", "MIDN" = "#F9AD51", "NCBN" = "#DC84F8",
                                               "NCRN" = "#E9E905", "NETN" = "#78E43C"),
-                                   name = "Network")} else {scale_color_brewer()}}+
+                                   name = "Network")} else {scale_color_brewer(palette = "Set2")}}+
          theme_bw()+
          theme(axis.text = element_text(size = 11),
                axis.title = element_text(size = 12),
                panel.background = element_blank(),
                #panel.grid.major = element_blank(),
                panel.grid.minor = element_blank(),
-               panel.border = element_rect(colour = "black", fill = NA, size = 0.1),
+               panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.1),
                legend.position = legend_position)+
           coord_flip()+
           scale_x_discrete(limits = rev)+

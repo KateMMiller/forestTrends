@@ -132,7 +132,7 @@ intervals for each combination across the replicate bootstraps.
  dat <- data.frame(site = site, y = y, qaqc = FALSE) # original dataframe
  dat_qc <- data.frame(site = site[1:10], y = yq, qaqc = TRUE) # qaqc dataframe from first 10 sites
 
- dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) \%>\%
+ dat_qc_wide <- dplyr::right_join(dat, dat_qc, by = "site", suffix = c("1", "2")) |>
    rename(samp1 = y1, samp2 = y2)
 
  #-- Run function
