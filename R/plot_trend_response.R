@@ -142,7 +142,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
     ggplot(df2, aes(x = time, y = estimate, linetype = sign, color = sign, fill = sign))+
       {if(ribbon == FALSE) geom_errorbar(aes(ymin = lower95, ymax = upper95), width = 0.2, size = 0.5,
                                          linetype = 'solid', na.rm = TRUE)}+
-      {if(ribbon == TRUE) geom_ribbon(aes(ymin = lower95, ymax = upper95, fill = sign, color = sign),
+      {if(ribbon == TRUE) geom_ribbon(aes(ymin = lower95, ymax = upper95),# fill = sign, color = sign),
                                       #fill = "#CACACA",
                                       #color = "#CACACA",
                                       lty = 1, alpha = 0.2, na.rm = TRUE)}+
@@ -172,7 +172,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
       ggplot(df2, aes(x = time, y = estimate, linetype = sign, color = sign, fill = sign))+
         {if(ribbon == FALSE) geom_errorbar(aes(ymin = lower95, ymax = upper95), width = 0.2, size = 0.5,
                                            linetype = 'solid', na.rm = TRUE)}+
-        {if(ribbon == TRUE) geom_ribbon(aes(ymin = lower95, ymax = upper95, fill = sign, color = sign),
+        {if(ribbon == TRUE) geom_ribbon(aes(ymin = lower95, ymax = upper95),# fill = sign, color = sign),
                                         #fill = "#CACACA",
                                         #color = "#CACACA",
                                         lty = 1, alpha = 0.2, na.rm = TRUE)}+
@@ -191,7 +191,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
               panel.background = element_blank(),
               panel.grid.major = element_blank(),
               panel.grid.minor = element_blank(),
-              panel.border = element_rect(colour = "black", fill = NA, size = 0.1),
+              panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.1),
               legend.position = 'none')+
         {if(!is.na(group)) facet_wrap(~df2[[group]], drop = FALSE, scales = facet_scales, ncol = facet_cols)}+
         #scale_x_continuous(breaks = xbreaks, labels = xlabels)+
