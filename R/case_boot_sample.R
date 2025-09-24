@@ -19,7 +19,8 @@
 #' with (1|ID) as random component. The slope option will fit a random slope model with (1 + x|ID) as the random component.
 #' If "custom" is used, must also specify random_formula.
 #' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
-#' @param nest_var Quoted column name containing the higher level grouping variable for a nested random effect.
+#' @param random_cols If random_type = 'custom', user must specify the columns beyond x and y that need to be included in the modeled dataset
+#' (e.g. if using year as an unordered random effect, specify the column that has year as a factor.)
 #' @param span numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
 #' and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
 #' You can calculate the number of time steps to include in the smoothing window by dividing p/n, where p is number of plots
@@ -56,10 +57,11 @@
 #'
 #' @export
 
-case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
+case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA_character_,
                              model_type = c("lmer", "loess"),
-                             random_type = c("intercept", "slope", "custom"), random_formula = NA,
-                             nest_var = NA, chatty = F,
+                             random_type = c("intercept", "slope", "custom"), random_formula = NA_character_,
+                             random_cols = NA_character_,
+                             chatty = F,
                              span = NA_real_, degree = 1, sample = TRUE, sample_num = 1){
 
   if(is.null(df)){stop("Must specify df to run function")}
@@ -71,6 +73,7 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   if(model_type == "loess" & !is.na(random_formula)){
     warning("Specified model_type is loess. Ignoring specified random_formula.")}
   stopifnot(c(x, y, ID) %in% names(df))
+  if(random_type == "custom" & !is.na(random_cols)){stopifnot(random_cols %in% names(df))}
 
   plots <- data.frame(ID = unique(df[,ID]))
   colnames(plots) <- "ID" # bug handling for purrr::map
@@ -84,8 +87,8 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   # Set up unique naming column, so plots selected more than once have a unique ID.
   samp$case <- as.factor(stringr::str_pad(rownames(samp), nchar(n), side ="left", pad = 0))
 
-  # Make sure nested variable in random effects is included in df_samp
-  cols <- if(!is.na(nest_var)){c(ID, x, y, nest_var)} else {c(ID, x, y)}
+  # Make sure custom random effects are included
+  cols <- if(!is.na(random_cols)){c(ID, x, y, random_cols)} else {c(ID, x, y)}
 
   df_samp <- dplyr::left_join(samp, df[,cols], by = c("ID" = ID)) |>
     dplyr::arrange(case, x)

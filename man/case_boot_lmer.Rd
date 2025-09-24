@@ -12,7 +12,7 @@ case_boot_lmer(
   group = NA,
   random_type = c("intercept", "slope", "custom"),
   random_formula = NA,
-  nest_var = NA,
+  random_cols = NA_character_,
   num_reps,
   chatty = FALSE
 )
@@ -37,7 +37,8 @@ If "custom" is used, must also specify random_formula.}
 
 \item{random_formula}{If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.}
 
-\item{nest_var}{Quoted column name containing the higher level grouping variable for a nested random effect.}
+\item{random_cols}{If random_type = 'custom', user must specify the columns beyond x and y that need to be included in the modeled dataset
+(e.g. if using year as an unordered random effect, specify the column that has year as a factor.)}
 
 \item{num_reps}{Number of replicates to run in the bootstrap.}
 
@@ -113,33 +114,44 @@ boot_results <- boot2 |> select(park, model) |> unnest(model) |> select(-num_boo
 #----- Examples with custom random effects
 park = rep(c("APRK", "BPRK", "CPRK"), each = 120)
 plot_name = paste(park, sprintf("\%02d", rep(c(1:40), each = 3)), sep = "-")
-cycle = rep(1:3, times = 40)
+year_std = rep(1:3, times = 40)
 b0 = 10
 b1 = 5
 grp = ifelse(park == "CPRK", 1, 0.5)
-y = b0 + b1*cycle*grp # grp C has stronger resp.
+y = b0 + b1*year_std*grp # grp C has stronger resp.
 
 resp = rnorm(120, mean = y, sd = 2)
 
-test_df <- data.frame(park, plot_name, cycle, resp)
-
+test_df <- data.frame(park, plot_name, year_std, resp)
+head(test_df)
 # nested random intercept
 test1 <- case_boot_lmer(test_df,
-                        x = 'cycle', y = 'resp',
+                        x = 'year_std', y = 'resp',
                         ID = 'plot_name', group = 'park',
                         random_type = 'custom',
                         random_formula = "(1|park/plot_name)",
-                        nest_var = "park",
+                        random_cols = "park",
                         num_reps = 100)
 
 # nested random slope
 test2 <- case_boot_lmer(test_df,
-                        x = 'cycle', y = 'resp',
+                        x = 'year_std', y = 'resp',
                         ID = 'plot_name', group = 'park',
                         random_type = 'custom',
-                        random_formula = "(cycle|park/plot_name)",
-                        nest_var = "park",
+                        random_formula = "(year_std|park/plot_name)",
+                        random_cols = "park",
                         num_reps = 100)
+
+# year as factor for APRK
+test_df$year_fac <- as.factor(test_df$year)
+test3 <- case_boot_lmer(test_df |> filter(park == "APRK"),
+                        x = 'year_std', y = 'resp',
+                        ID = 'plot_name',
+                        random_type = 'custom',
+                        random_formula = '(1+year_std|plot_name) + (1|year_fac)',
+                        random_cols = "year_fac",
+                        num_reps = 100)
+
 }
 
 }

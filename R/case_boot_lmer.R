@@ -24,7 +24,8 @@
 #' with (1|ID) as random component. The slope option will fit a random slope model with (1 + x|ID) as the random component.
 #' If "custom" is used, must also specify random_formula.
 #' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
-#' @param nest_var Quoted column name containing the higher level grouping variable for a nested random effect.
+#' @param random_cols If random_type = 'custom', user must specify the columns beyond x and y that need to be included in the modeled dataset
+#' (e.g. if using year as an unordered random effect, specify the column that has year as a factor.)
 #' @param num_reps Number of replicates to run in the bootstrap.
 #' @param chatty TRUE or FALSE. TRUE will print progress in the console, including the first four characters
 #' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE (default) will not print progress in console.
@@ -91,40 +92,51 @@
 #' #----- Examples with custom random effects
 #' park = rep(c("APRK", "BPRK", "CPRK"), each = 120)
 #' plot_name = paste(park, sprintf("%02d", rep(c(1:40), each = 3)), sep = "-")
-#' cycle = rep(1:3, times = 40)
+#' year_std = rep(1:3, times = 40)
 #' b0 = 10
 #' b1 = 5
 #' grp = ifelse(park == "CPRK", 1, 0.5)
-#' y = b0 + b1*cycle*grp # grp C has stronger resp.
+#' y = b0 + b1*year_std*grp # grp C has stronger resp.
 #'
 #' resp = rnorm(120, mean = y, sd = 2)
 #'
-#' test_df <- data.frame(park, plot_name, cycle, resp)
-#'
+#' test_df <- data.frame(park, plot_name, year_std, resp)
+#' head(test_df)
 #' # nested random intercept
 #' test1 <- case_boot_lmer(test_df,
-#'                         x = 'cycle', y = 'resp',
+#'                         x = 'year_std', y = 'resp',
 #'                         ID = 'plot_name', group = 'park',
 #'                         random_type = 'custom',
 #'                         random_formula = "(1|park/plot_name)",
-#'                         nest_var = "park",
+#'                         random_cols = "park",
 #'                         num_reps = 100)
 #'
 #' # nested random slope
 #' test2 <- case_boot_lmer(test_df,
-#'                         x = 'cycle', y = 'resp',
+#'                         x = 'year_std', y = 'resp',
 #'                         ID = 'plot_name', group = 'park',
 #'                         random_type = 'custom',
-#'                         random_formula = "(cycle|park/plot_name)",
-#'                         nest_var = "park",
+#'                         random_formula = "(year_std|park/plot_name)",
+#'                         random_cols = "park",
 #'                         num_reps = 100)
+#'
+#' # year as factor for APRK
+#' test_df$year_fac <- as.factor(test_df$year)
+#' test3 <- case_boot_lmer(test_df |> filter(park == "APRK"),
+#'                         x = 'year_std', y = 'resp',
+#'                         ID = 'plot_name',
+#'                         random_type = 'custom',
+#'                         random_formula = '(1+year_std|plot_name) + (1|year_fac)',
+#'                         random_cols = "year_fac",
+#'                         num_reps = 100)
+#'
 #' }
 #'
 #' @export
 
 case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
                            random_type = c('intercept', 'slope', 'custom'),
-                           random_formula = NA, nest_var = NA,
+                           random_formula = NA, random_cols = NA_character_,
                            num_reps, chatty = FALSE){
 
   if(is.null(df)){stop("Must specify df to run function")}
@@ -135,6 +147,9 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   random_type <- match.arg(random_type)
   if(random_type == "custom" & is.na(random_formula)){stop("Must specify random formula of random_type = 'custom'")}
   stopifnot(c(x, y, ID) %in% names(df))
+  if(random_type == "custom" & !is.na(random_cols)){stopifnot(random_cols %in% names(df))}
+  if(random_type == "custom" & is.na(random_cols)){warning(paste0("random_type = 'custom', but no random_cols specified. ",
+                                                                  "If model returned no fits, it may be that you need to specify column(s) in the custom random effects via random_cols."))}
 
   pname1 <- substr(df[1, ID], 1, 4)
 
@@ -155,7 +170,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   real_mod <- suppressWarnings(case_boot_sample(df, x = x, y = y, ID = ID, sample = F, sample_num = 1,
                                                 group = group,
                                                 random_type = random_type, random_formula = random_formula,
-                                                nest_var = nest_var,
+                                                random_cols = random_cols,
                                                 model_type = 'lmer') |>
                                dplyr::select(-boot_num, -isSingular))
 
@@ -166,7 +181,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
                                      ~case_boot_sample(df, x = x, y = y, ID = ID, sample = T, sample_num = .x,
                                                        group = group,
                                                        random_type = random_type, random_formula = random_formula,
-                                                       nest_var = nest_var,
+                                                       random_cols = random_cols,
                                                        model_type = 'lmer'), .progress = chatty) |>
                        purrr::list_rbind() |>
       tidyr::pivot_wider(names_from = term, values_from = estimate)) |>  data.frame()

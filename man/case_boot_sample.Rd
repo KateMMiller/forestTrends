@@ -9,11 +9,11 @@ case_boot_sample(
   x = "cycle",
   y,
   ID = "Plot_Name",
-  group = NA,
+  group = NA_character_,
   model_type = c("lmer", "loess"),
   random_type = c("intercept", "slope", "custom"),
-  random_formula = NA,
-  nest_var = NA,
+  random_formula = NA_character_,
+  random_cols = NA_character_,
   chatty = F,
   span = NA_real_,
   degree = 1,
@@ -43,7 +43,8 @@ If "custom" is used, must also specify random_formula.}
 
 \item{random_formula}{If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.}
 
-\item{nest_var}{Quoted column name containing the higher level grouping variable for a nested random effect.}
+\item{random_cols}{If random_type = 'custom', user must specify the columns beyond x and y that need to be included in the modeled dataset
+(e.g. if using year as an unordered random effect, specify the column that has year as a factor.)}
 
 \item{chatty}{TRUE or FALSE. TRUE will print progress in the console, including the first four characters
 in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE (default) will not print progress in console.
