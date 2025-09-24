@@ -54,16 +54,16 @@
 #'                        resp = runif(72, 0, 30))
 #'
 #' # Nest dataset by park
-#' nested_df <- fake_2pk %>% mutate(grp = park) %>% group_by(park) %>% nest()
+#' nested_df <- fake_2pk |> mutate(grp = park)  |>  group_by(park)  |>  nest()
 #'
 #' # Run case_boot_lmer on nested dataset
-#' boot2 <- nested_df %>% mutate(
+#' boot2 <- nested_df |> mutate(
 #'   model = map(data, ~case_boot_loess(., x = "cycle", y = "resp", ID = "Plot_Name",
 #'                                     span = 0.75, group = "grp",
 #'                                     num_reps = 100, chatty = TRUE)))
 #'
 #' # Compile results
-#' boot_results <- boot2 %>% select(park, model) %>% unnest(model) %>% select(-num_boots)
+#' boot_results <- boot2 |> select(park, model) |> unnest(model) |> select(-num_boots)
 #'
 #' # Plot results
 #' plot_trend_response(boot_results, xlab = "Cycle", ylab = "BA", group = "park", ribbon = T,
@@ -73,9 +73,9 @@
 #'
 #' @export
 
-plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'), group = NA,
+plot_trend_response <- function(df, xlab, ylab, model_type = 'lmer', group = NA,
                                 ribbon = FALSE, sign_color = c("#D3D3D3", "#696969", "#228B22", "#CD5C5C"),
-                                facet_scales = c("fixed"), facet_cols = 4, ptsize = 1){
+                                facet_scales = "fixed", facet_cols = 4, ptsize = 1, legend_position = 'none'){
 
     match.arg(facet_scales, c("fixed", "free", "free_y", "free_x"))
 
@@ -89,25 +89,25 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
 
     df2 <- if(model_type == "lmer"){
                if(!is.na(group)){
-                 left_join(df, df %>% filter(term == "Slope") %>%
+                 left_join(df, df  |>  filter(term == "Slope") |>
                                       mutate(sign = case_when(lower95 > 0 ~ "signinc",
                                                               upper95 < 0 ~ "signdec",
                                                               is.na(lower95) ~ "notmod",
-                                                              TRUE ~ "nonsign")) %>%
+                                                              TRUE ~ "nonsign")) |>
                                       select(!!group_sym, sign),
-                            by = group) %>%
+                            by = group) |>
                  filter(!term %in% c("Intercept", "Slope"))
-         } else {cbind(df, df %>% filter(term == "Slope") %>%
+         } else {cbind(df, df |> filter(term == "Slope") |>
                                   mutate(sign = case_when(lower95 > 0 ~ "signinc",
                                                           upper95 < 0 ~ "signdec",
                                                           is.na(lower95) ~ "notmod",
-                                                          TRUE ~ "nonsign")) %>%
-                                  select(sign)) %>%
+                                                          TRUE ~ "nonsign")) |>
+                                  select(sign)) |>
                  filter(!term %in% c("Intercept", "Slope"))
          }
     } else if (model_type == "loess"){
                if(!is.na(group)){
-                 left_join(df, df %>% arrange(time) %>% group_by(!!group_sym) %>%
+                 left_join(df, df |> arrange(time) |> group_by(!!group_sym) |>
                                  summarize(up_first = first(upper95),
                                            up_last = last(upper95),
                                            lo_first = first(lower95),
@@ -115,10 +115,10 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
                                            sign = case_when(up_first < lo_last ~ "signinc",
                                                             lo_first > up_last ~ "signdec",
                                                             is.na(up_first) ~ "notmod",
-                                                            TRUE ~ "nonsign")) %>%
+                                                            TRUE ~ "nonsign")) |>
                                  select(!!group_sym, sign), by = group)
                } else {
-                 cbind(df, df %>% arrange(time) %>%
+                 cbind(df, df |> arrange(time) |>
                                summarize(up_first = first(upper95),
                                          up_last = last(upper95),
                                          lo_first = first(lower95),
@@ -126,7 +126,7 @@ plot_trend_response <- function(df, xlab, ylab, model_type = c('lmer', 'loess'),
                                          sign = case_when(up_first < lo_last ~ "signinc",
                                                           lo_first > up_last ~ "signdec",
                                                           is.na(up_first) ~ "notmod",
-                                                          TRUE ~ "nonsign")) %>% select(sign)
+                                                          TRUE ~ "nonsign")) |> select(sign)
                  )
 
 
