@@ -1,7 +1,7 @@
 Package: forestTrends
 Type: Package
 Title: Package uses case bootstrap to analyze trends with NPS forest data
-Version: 0.1.5
+Version: 0.1.6
 Author: Kate Miller, John Paul Schmit
 Maintainer: Kate Miller <kathryn_miller@nps.gov>
 Description: This package contains functions that are tailord to NPS forest data for analyzing trends using case bootstrap and random intercept model.

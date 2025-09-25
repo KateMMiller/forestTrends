@@ -14,8 +14,11 @@
 #' with (1|ID) as random component. The slope option will fit a random slope model with (1 + x|ID) as the random component.
 #' If "custom" is used, must also specify random_formula.
 #' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
+#' @param optimizer If blank, will use lme4 default optimizer. Otherwise will add a lmerControl to the lmer() function call. This
+#' is helpful where model convergence is an issue. A common optimizer is 'bobyqa'. You can determine which optimizer to use by running
+#' lme4::fitAll(mod_name). Currently only set up for 'bobyqa' and 'Nelder_Mead'.
 #'
-#' @importFrom lme4 lmer
+#' @importFrom lme4 lmer lmerControl
 #' @importFrom broom.mixed tidy
 #' @importFrom dplyr filter select
 #' @importFrom prediction find_data
@@ -38,12 +41,16 @@
 #'
 #' mod2 <- trend_lmer(test_df |> filter(group == "GRP.1"), x = "cycle", y = "resp", ID = "plot_name",
 #'   random_type = "custom", random_formula = "(1|park/plot_name)")
+#'
+#'
 #' }
 #'
 #' @export
 
 trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name",
-                       random_type = c("intercept", "slope", "custom"), random_formula = NA){
+                       random_type = c("intercept", "slope", "custom"),
+                       random_formula = NA,
+                       optimizer = NA){
 
   if(is.null(df)){stop("Must specify df to run function")}
   if(is.null(x)){stop("Must specify x variable to run function")}
@@ -52,7 +59,7 @@ trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name",
   random_type <- match.arg(random_type)
   if(random_type == "custom" & is.na(random_formula)){stop("Must specify random formula of random_type = 'custom'")}
   stopifnot(c(x, y, ID) %in% names(df))
-
+  if(!is.na(optimizer)){stopifnot(optimizer %in% c("bobyqa", "Nelder_Mead"))}
   # set up model
   mod_df <- data.frame(term = c("Intercept", "Slope"), estimate = NA_real_)
   pred_df <- data.frame(term = paste0(substr(x, 1, 1), unique(df[,x]), "_response"),
@@ -64,8 +71,14 @@ trend_lmer <- function(df, x = "cycle", y, ID = "Plot_Name",
               'intercept' =  stats::as.formula(paste0(y, "~ ", x, "+ (1|", ID,")")),
               'slope' = stats::as.formula(paste0(y, "~ ", x, " + (1 + ", x, "|", ID, ")")),
               'custom' = stats::as.formula(paste0(y, "~ ", x, " + ", random_formula)))
-
-      mod <- suppressMessages(lme4::lmer(trend_form, data = df))
+      mod <-
+      if(is.na(optimizer)){
+        #suppressMessages(
+          lme4::lmer(trend_form, data = df)
+         # )
+      } else {#suppressMessages(
+        lme4::lmer(trend_form, data = df, control = lmerControl(optimizer = optimizer))#)
+        }
       # fit model and clean up output
       mod_df <- broom.mixed::tidy(mod) |> dplyr::filter(effect == 'fixed') |>
         dplyr::select(term, estimate) |> data.frame()

@@ -13,7 +13,8 @@ case_boot_lmer(
   random_type = c("intercept", "slope", "custom"),
   random_formula = NA,
   random_cols = NA_character_,
-  num_reps,
+  optimizer = NA_character_,
+  num_reps = NA_real_,
   chatty = FALSE
 )
 }
@@ -39,6 +40,10 @@ If "custom" is used, must also specify random_formula.}
 
 \item{random_cols}{If random_type = 'custom', user must specify the columns beyond x and y that need to be included in the modeled dataset
 (e.g. if using year as an unordered random effect, specify the column that has year as a factor.)}
+
+\item{optimizer}{If blank, will use lme4 default optimizer. Otherwise will add a lmerControl to the lmer() function call. This
+is helpful where model convergence is an issue. A common optimizer is 'bobyqa'. You can determine which optimizer to use by running
+lme4::fitAll(mod_name). Currently only set up for 'bobyqa' and 'Nelder_Mead'.}
 
 \item{num_reps}{Number of replicates to run in the bootstrap.}
 
@@ -142,7 +147,7 @@ test2 <- case_boot_lmer(test_df,
                         random_cols = "park",
                         num_reps = 100)
 
-# year as factor for APRK
+# year as factor for APRK with bobyqa optimization
 test_df$year_fac <- as.factor(test_df$year)
 test3 <- case_boot_lmer(test_df |> filter(park == "APRK"),
                         x = 'year_std', y = 'resp',
@@ -150,6 +155,7 @@ test3 <- case_boot_lmer(test_df |> filter(park == "APRK"),
                         random_type = 'custom',
                         random_formula = '(1+year_std|plot_name) + (1|year_fac)',
                         random_cols = "year_fac",
+                        optimizer = 'bobyqa',
                         num_reps = 100)
 
 }

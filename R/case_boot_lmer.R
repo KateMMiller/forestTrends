@@ -26,6 +26,9 @@
 #' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
 #' @param random_cols If random_type = 'custom', user must specify the columns beyond x and y that need to be included in the modeled dataset
 #' (e.g. if using year as an unordered random effect, specify the column that has year as a factor.)
+#' @param optimizer If blank, will use lme4 default optimizer. Otherwise will add a lmerControl to the lmer() function call. This
+#' is helpful where model convergence is an issue. A common optimizer is 'bobyqa'. You can determine which optimizer to use by running
+#' lme4::fitAll(mod_name). Currently only set up for 'bobyqa' and 'Nelder_Mead'.
 #' @param num_reps Number of replicates to run in the bootstrap.
 #' @param chatty TRUE or FALSE. TRUE will print progress in the console, including the first four characters
 #' in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE (default) will not print progress in console.
@@ -120,7 +123,7 @@
 #'                         random_cols = "park",
 #'                         num_reps = 100)
 #'
-#' # year as factor for APRK
+#' # year as factor for APRK with bobyqa optimization
 #' test_df$year_fac <- as.factor(test_df$year)
 #' test3 <- case_boot_lmer(test_df |> filter(park == "APRK"),
 #'                         x = 'year_std', y = 'resp',
@@ -128,6 +131,7 @@
 #'                         random_type = 'custom',
 #'                         random_formula = '(1+year_std|plot_name) + (1|year_fac)',
 #'                         random_cols = "year_fac",
+#'                         optimizer = 'bobyqa',
 #'                         num_reps = 100)
 #'
 #' }
@@ -137,7 +141,8 @@
 case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
                            random_type = c('intercept', 'slope', 'custom'),
                            random_formula = NA, random_cols = NA_character_,
-                           num_reps, chatty = FALSE){
+                           optimizer = NA_character_,
+                           num_reps = NA_real_, chatty = FALSE){
 
   if(is.null(df)){stop("Must specify df to run function")}
   if(is.null(x)){stop("Must specify x variable to run function")}
@@ -146,6 +151,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   if(is.null(num_reps)){stop("Must specify num_reps (number of replicates) for bootstrap")}
   random_type <- match.arg(random_type)
   if(random_type == "custom" & is.na(random_formula)){stop("Must specify random formula of random_type = 'custom'")}
+  if(!is.na(optimizer)){stopifnot(optimizer %in% c("bobyqa", "Nelder_Mead"))}
   stopifnot(c(x, y, ID) %in% names(df))
   if(random_type == "custom" & !is.na(random_cols)){stopifnot(random_cols %in% names(df))}
   if(random_type == "custom" & is.na(random_cols)){warning(paste0("random_type = 'custom', but no random_cols specified. ",
@@ -170,7 +176,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
   real_mod <- suppressWarnings(case_boot_sample(df, x = x, y = y, ID = ID, sample = F, sample_num = 1,
                                                 group = group,
                                                 random_type = random_type, random_formula = random_formula,
-                                                random_cols = random_cols,
+                                                random_cols = random_cols, optimizer = optimizer,
                                                 model_type = 'lmer') |>
                                dplyr::select(-boot_num, -isSingular))
 
@@ -181,7 +187,7 @@ case_boot_lmer <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA,
                                      ~case_boot_sample(df, x = x, y = y, ID = ID, sample = T, sample_num = .x,
                                                        group = group,
                                                        random_type = random_type, random_formula = random_formula,
-                                                       random_cols = random_cols,
+                                                       random_cols = random_cols, optimizer = optimizer,
                                                        model_type = 'lmer'), .progress = chatty) |>
                        purrr::list_rbind() |>
       tidyr::pivot_wider(names_from = term, values_from = estimate)) |>  data.frame()

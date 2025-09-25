@@ -10,7 +10,8 @@ trend_lmer(
   y,
   ID = "Plot_Name",
   random_type = c("intercept", "slope", "custom"),
-  random_formula = NA
+  random_formula = NA,
+  optimizer = NA
 )
 }
 \arguments{
@@ -29,6 +30,10 @@ with (1|ID) as random component. The slope option will fit a random slope model 
 If "custom" is used, must also specify random_formula.}
 
 \item{random_formula}{If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.}
+
+\item{optimizer}{If blank, will use lme4 default optimizer. Otherwise will add a lmerControl to the lmer() function call. This
+is helpful where model convergence is an issue. A common optimizer is 'bobyqa'. You can determine which optimizer to use by running
+lme4::fitAll(mod_name). Currently only set up for 'bobyqa' and 'Nelder_Mead'.}
 }
 \description{
 Fit random effects model in lmer, and return fixed effects intercept and slope and predicted responses for each
@@ -53,6 +58,8 @@ mod <- trend_lmer(test_df, x = "cycle", y = "resp", ID = "plot_name", random_typ
 
 mod2 <- trend_lmer(test_df |> filter(group == "GRP.1"), x = "cycle", y = "resp", ID = "plot_name",
   random_type = "custom", random_formula = "(1|park/plot_name)")
+
+
 }
 
 }

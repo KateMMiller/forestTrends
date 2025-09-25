@@ -21,6 +21,9 @@
 #' @param random_formula If random_type = "custom", specify the random effects formula for the model in quotes. Otherwise leave blank.
 #' @param random_cols If random_type = 'custom', user must specify the columns beyond x and y that need to be included in the modeled dataset
 #' (e.g. if using year as an unordered random effect, specify the column that has year as a factor.)
+#' @param optimizer If blank, will use lme4 default optimizer. Otherwise will add a lmerControl to the lmer() function call. This
+#' is helpful where model convergence is an issue. A common optimizer is 'bobyqa'. You can determine which optimizer to use by running
+#' lme4::fitAll(mod_name). Currently only set up for 'bobyqa' and 'Nelder_Mead'.
 #' @param span numeric value that controls the degree of smoothing. Smaller values (e.g., 0.1) result in less smoothing,
 #' and possibly over-fitting the curve. Higher values (e.g., 0.9) result is more smoothing and possibly under-fitting.
 #' You can calculate the number of time steps to include in the smoothing window by dividing p/n, where p is number of plots
@@ -59,8 +62,9 @@
 
 case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA_character_,
                              model_type = c("lmer", "loess"),
-                             random_type = c("intercept", "slope", "custom"), random_formula = NA_character_,
-                             random_cols = NA_character_,
+                             random_type = c("intercept", "slope", "custom"),
+                             random_formula = NA_character_,
+                             random_cols = NA_character_, optimizer = NA_character_,
                              chatty = F,
                              span = NA_real_, degree = 1, sample = TRUE, sample_num = 1){
 
@@ -72,6 +76,7 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA_ch
   if(random_type == "custom" & is.na(random_formula)){stop("Must specify random formula of random_type = 'custom'")}
   if(model_type == "loess" & !is.na(random_formula)){
     warning("Specified model_type is loess. Ignoring specified random_formula.")}
+  if(!is.na(optimizer)){stopifnot(optimizer %in% c("bobyqa", "Nelder_Mead"))}
   stopifnot(c(x, y, ID) %in% names(df))
   if(random_type == "custom" & !is.na(random_cols)){stopifnot(random_cols %in% names(df))}
 
@@ -102,7 +107,8 @@ case_boot_sample <- function(df, x = "cycle", y, ID = "Plot_Name", group = NA_ch
     if(model_type == "lmer"){
       suppressMessages(
         trend_lmer(df_samp, x = x, y = y, ID = "case",
-                   random_type = random_type, random_formula = rand_form)) |>
+                   random_type = random_type, random_formula = rand_form,
+                   optimizer = optimizer)) |>
         dplyr::mutate(boot_num = ifelse(exists("sample_num"), sample_num, 1))
     } else if(model_type == "loess"){
       suppressMessages(

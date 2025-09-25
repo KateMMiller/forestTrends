@@ -14,6 +14,7 @@ case_boot_sample(
   random_type = c("intercept", "slope", "custom"),
   random_formula = NA_character_,
   random_cols = NA_character_,
+  optimizer = NA_character_,
   chatty = F,
   span = NA_real_,
   degree = 1,
@@ -45,6 +46,10 @@ If "custom" is used, must also specify random_formula.}
 
 \item{random_cols}{If random_type = 'custom', user must specify the columns beyond x and y that need to be included in the modeled dataset
 (e.g. if using year as an unordered random effect, specify the column that has year as a factor.)}
+
+\item{optimizer}{If blank, will use lme4 default optimizer. Otherwise will add a lmerControl to the lmer() function call. This
+is helpful where model convergence is an issue. A common optimizer is 'bobyqa'. You can determine which optimizer to use by running
+lme4::fitAll(mod_name). Currently only set up for 'bobyqa' and 'Nelder_Mead'.}
 
 \item{chatty}{TRUE or FALSE. TRUE will print progress in the console, including the first four characters
 in the Plot_Name and a tick for every other replicate of the bootstrap. FALSE (default) will not print progress in console.
